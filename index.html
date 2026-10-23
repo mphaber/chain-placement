@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Chain Placement</title>
+    <style>
+      :root {
+        --bg: #f4f1ea;
+        --surface: #fffdf8;
+        --surface-2: #ece7db;
+        --ink: #23272a;
+        --ink-soft: #5c6066;
+        --line: #d8d2c4;
+        --accent: #9a5b2e;
+        --accent-ink: #ffffff;
+        --cell: #e7e1d2;
+        --cell-edge: #d5cdb8;
+        --merge-ring: #b4762a;
+        --good: #3f7a4e;
+        --shadow: 0 10px 30px rgba(46, 38, 22, 0.14);
+        --radius: 14px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #17181c;
+          --surface: #212329;
+          --surface-2: #2a2d34;
+          --ink: #ece9e2;
+          --ink-soft: #a7a396;
+          --line: #3a3d45;
+          --accent: #d99a55;
+          --accent-ink: #1d1508;
+          --cell: #2b2e36;
+          --cell-edge: #3c404a;
+          --merge-ring: #e0a34e;
+          --good: #7fc48f;
+          --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: ui-sans-system, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+      }
+      .wrap {
+        max-width: 520px;
+        margin: 0 auto;
+        padding: 18px 16px 40px;
+      }
+      header.top {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+      h1 {
+        font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+        font-weight: 600;
+        font-size: 26px;
+        letter-spacing: 0.2px;
+        margin: 0;
+      }
+      .tagline {
+        color: var(--ink-soft);
+        font-size: 13px;
+        margin: 2px 0 0;
+      }
+      .new-btn {
+        flex: none;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--ink);
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 8px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .new-btn:active { transform: scale(0.97); }
+      .top-actions { display: flex; gap: 8px; flex: none; align-items: center; }
+      .sound-btn { display: inline-flex; align-items: center; gap: 6px; }
+      .sound-btn .ic { width: 15px; height: 15px; flex: none; display: block; }
+      .sound-btn .ic-off { display: none; }
+      .sound-btn[aria-pressed="false"] { color: var(--ink-soft); }
+      .sound-btn[aria-pressed="false"] .ic-on { display: none; }
+      .sound-btn[aria-pressed="false"] .ic-off { display: block; }
+      @media (max-width: 430px) {
+        .sound-btn .btn-label { display: none; }
+        .sound-btn { padding: 8px 10px; }
+      }
+
+      /* Mode tabs */
+      .tabs {
+        display: flex;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 4px;
+        gap: 4px;
+        margin-bottom: 16px;
+      }
+      .tab {
+        flex: 1;
+        border: 0;
+        background: transparent;
+        color: var(--ink-soft);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 9px 6px;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .tab[aria-selected="true"] {
+        background: var(--surface);
+        color: var(--ink);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+      }
+      .tab .sub { display: block; font-size: 11px; font-weight: 500; color: var(--ink-soft); margin-top: 1px; }
+
+      /* Stats */
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .stat {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 8px 6px 9px;
+        text-align: center;
+      }
+      .stat .k { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+      .stat .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
+
+      /* Tile queue */
+      .queue {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 12px 14px;
+        margin-bottom: 8px;
+      }
+      .queue .now-label, .queue .next-label {
+        font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 5px;
+      }
+      .next-tiles { display: flex; gap: 6px; }
+      .bag-info { margin-left: auto; text-align: right; }
+      .bag-info .bag-count { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+      .bag-info .bag-left { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; max-width: 150px; }
+      .bag-info .bag-cap { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 5px; }
+
+      .mini-tile {
+        width: 40px; height: 40px;
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums;
+      }
+      .mini-tile.now { width: 54px; height: 54px; font-size: 22px; border-radius: 12px; box-shadow: inset 0 0 0 2px rgba(0,0,0,0.14); }
+      .mini-tile.dim { opacity: 0.88; }
+
+      .turn-line {
+        min-height: 22px;
+        text-align: center;
+        font-size: 13.5px;
+        color: var(--ink-soft);
+        margin: 2px 0 8px;
+      }
+      .turn-line b { color: var(--ink); }
+      .turn-line .chain { color: var(--merge-ring); font-weight: 700; }
+
+      /* Board */
+      .board-shell { position: relative; }
+      .board {
+        display: grid;
+        gap: 7px;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 10px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .cell {
+        aspect-ratio: 1 / 1;
+        border-radius: 12px;
+        background: var(--cell);
+        border: 1px solid var(--cell-edge);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        font-size: clamp(18px, 6.4vw, 27px);
+        padding: 0;
+        font-family: inherit;
+        color: inherit;
+        position: relative;
+        cursor: pointer;
+      }
+      button.cell.filled { cursor: default; border-color: rgba(0,0,0,0.10); }
+      .cell.will-merge::after {
+        content: "";
+        position: absolute; inset: 3px;
+        border-radius: 9px;
+        border: 2px dashed var(--merge-ring);
+        opacity: 0.65;
+        pointer-events: none;
+      }
+      .cell.just-placed { animation: place 0.22s ease-out; }
+      .cell.merging { animation: mergepop 0.34s ease-out; }
+      .cell.consumed { animation: consumed 0.3s ease-in forwards; }
+      @keyframes place {
+        0% { transform: scale(0.6); } 60% { transform: scale(1.08); } 100% { transform: scale(1); }
+      }
+      @keyframes mergepop {
+        0% { transform: scale(1); } 40% { transform: scale(1.22); } 100% { transform: scale(1); }
+      }
+      @keyframes consumed {
+        0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.4); opacity: 0.15; }
+      }
+      .float-score {
+        position: absolute;
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--merge-ring);
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        animation: floatup 1.05s ease-out forwards;
+        text-shadow: 0 1px 0 var(--bg);
+        z-index: 5;
+        white-space: nowrap;
+      }
+      @keyframes floatup {
+        0% { opacity: 0; margin-top: 6px; }
+        15% { opacity: 1; }
+        100% { opacity: 0; margin-top: -38px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .cell.just-placed, .cell.merging, .cell.consumed, .float-score { animation: none; }
+      }
+
+      /* Tile colors: muted, sophisticated ramp */
+      .t2    { background: #cfd8c3; color: #2f3d27; }
+      .t4    { background: #b9c9dd; color: #26374c; }
+      .t8    { background: #a8b8d8; color: #232f47; }
+      .t16   { background: #93a5cf; color: #1f2742; }
+      .t32   { background: #b3a6d4; color: #2e2547; }
+      .t64   { background: #cf9db9; color: #472335; }
+      .t128  { background: #dda08c; color: #4a2718; }
+      .t256  { background: #dfbc7d; color: #473311; }
+      .t512  { background: #c9cf7a; color: #39400f; }
+      .t1024 { background: #8fc39a; color: #17381f; }
+      .t2048 { background: #6fae8f; color: #0f2f22; }
+      .tbig  { background: #4f7f74; color: #eaf5f1; }
+      @media (prefers-color-scheme: dark) {
+        .t2    { background: #5b6a50; color: #eef3e4; }
+        .t4    { background: #4d6076; color: #e8eff7; }
+        .t8    { background: #50638c; color: #e9edf9; }
+        .t16   { background: #5a6ea3; color: #edf0fa; }
+        .t32   { background: #6d5d99; color: #f0ebfa; }
+        .t64   { background: #8a5476; color: #f9ecf3; }
+        .t128  { background: #96604b; color: #faefe8; }
+        .t256  { background: #8f7136; color: #faf3df; }
+        .t512  { background: #767c37; color: #f4f7df; }
+        .t1024 { background: #49795a; color: #e9f6ec; }
+        .t2048 { background: #3d7a68; color: #e8f6f0; }
+        .tbig  { background: #2f6b5e; color: #eafaf4; }
+      }
+      .cell .small-num { font-size: 0.72em; }
+
+      /* Game over overlay */
+      .overlay {
+        position: absolute; inset: 0;
+        background: color-mix(in srgb, var(--bg) 78%, transparent);
+        backdrop-filter: blur(2px);
+        border-radius: 18px;
+        display: none;
+        align-items: center; justify-content: center;
+        padding: 16px;
+        z-index: 8;
+      }
+      .overlay.open { display: flex; }
+      .over-card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+        padding: 22px 20px 18px;
+        text-align: center;
+        width: 100%;
+        max-width: 340px;
+      }
+      .over-card h2 {
+        font-family: Georgia, "Iowan Old Style", serif;
+        margin: 0 0 4px; font-size: 24px; font-weight: 600;
+      }
+      .over-card .mode-line { color: var(--ink-soft); font-size: 13px; margin-bottom: 14px; }
+      .over-stats { display: flex; justify-content: center; gap: 22px; margin-bottom: 16px; }
+      .over-stats .k { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+      .over-stats .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+      .over-actions { display: flex; gap: 8px; }
+      .btn {
+        flex: 1;
+        font: inherit; font-size: 14px; font-weight: 600;
+        padding: 11px 10px; border-radius: 12px; cursor: pointer;
+        border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+      }
+      .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+      .btn:active { transform: scale(0.97); }
+      .copy-status { font-size: 12.5px; color: var(--good); min-height: 17px; margin-top: 10px; }
+      .share-text {
+        display: none;
+        width: 100%; margin-top: 8px;
+        font: inherit; font-size: 12.5px;
+        background: var(--surface-2); color: var(--ink);
+        border: 1px solid var(--line); border-radius: 8px; padding: 8px;
+      }
+      .share-text.show { display: block; }
+
+      details.howto {
+        margin-top: 18px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 12px 16px;
+      }
+      details.howto summary {
+        font-weight: 600; font-size: 14.5px; cursor: pointer;
+      }
+      details.howto p { font-size: 14px; line-height: 1.55; color: var(--ink-soft); margin: 10px 0 4px; }
+      details.howto p b { color: var(--ink); }
+      .legend { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+      .legend span {
+        font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+      }
+      footer.note { text-align: center; color: var(--ink-soft); font-size: 12px; margin-top: 16px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <div>
+          <h1>Chain Placement</h1>
+          <p class="tagline">Set the trap. Spring the chain.</p>
+        </div>
+        <div class="top-actions">
+          <button class="new-btn sound-btn" id="soundBtn" type="button" aria-pressed="true" aria-label="Sound on">
+            <svg class="ic ic-on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9.5v5h3.5L12 19.5v-15L6.5 9.5H3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.4 7.4 0 0 1 0 10.4"/></svg>
+            <svg class="ic ic-off" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9.5v5h3.5L12 19.5v-15L6.5 9.5H3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+            <span class="btn-label">Sound</span>
+          </button>
+          <button class="new-btn" id="newGameBtn" type="button">New game</button>
+        </div>
+      </header>
+
+      <div class="tabs" role="tablist" aria-label="Game mode">
+        <button class="tab" id="tabFree" role="tab" type="button" aria-selected="true">
+          Free Play
+          <span class="sub">Random bags, endless runs</span>
+        </button>
+        <button class="tab" id="tabDaily" role="tab" type="button" aria-selected="false">
+          Daily
+          <span class="sub" id="dailySub">Same tiles for everyone today</span>
+        </button>
+      </div>
+
+      <section class="stats" aria-label="Game statistics">
+        <div class="stat"><div class="k">Score</div><div class="v" id="statScore">0</div></div>
+        <div class="stat"><div class="k">Best</div><div class="v" id="statBest">0</div></div>
+        <div class="stat"><div class="k">Highest tile</div><div class="v" id="statHigh">–</div></div>
+        <div class="stat"><div class="k">Turns</div><div class="v" id="statTurns">0</div></div>
+      </section>
+
+      <section class="queue" aria-label="Upcoming tiles">
+        <div>
+          <div class="now-label">Place next</div>
+          <div class="mini-tile now" id="nowTile">2</div>
+        </div>
+        <div>
+          <div class="next-label">Then</div>
+          <div class="next-tiles" id="nextTiles"></div>
+        </div>
+        <div class="bag-info">
+          <div class="bag-cap">In this bag</div>
+          <div class="bag-count"><span id="bagCount">10</span> left</div>
+          <div class="bag-left" id="bagLeft"></div>
+        </div>
+      </section>
+
+      <div class="turn-line" id="turnLine">Tap an empty cell to place the tile.</div>
+
+      <div class="board-shell">
+        <div class="board" id="board" role="grid" aria-label="Game board"></div>
+        <div class="overlay" id="overlay">
+          <div class="over-card">
+            <h2>Board full</h2>
+            <div class="mode-line" id="overMode"></div>
+            <div class="over-stats">
+              <div><div class="k">Score</div><div class="v" id="overScore">0</div></div>
+              <div><div class="k">Highest tile</div><div class="v" id="overHigh">–</div></div>
+              <div><div class="k">Turns</div><div class="v" id="overTurns">0</div></div>
+            </div>
+            <div class="over-actions">
+              <button class="btn primary" id="againBtn" type="button">Play again</button>
+              <button class="btn" id="copyBtn" type="button">Copy result</button>
+            </div>
+            <div class="copy-status" id="copyStatus"></div>
+            <textarea class="share-text" id="shareText" rows="3" readonly></textarea>
+          </div>
+        </div>
+      </div>
+
+      <details class="howto">
+        <summary>How to play</summary>
+        <p>
+          Tap an empty cell to place the tile shown under <b>Place next</b>. A tile merges only when it
+          touches <b>at least 2 tiles of the same value</b> directly up, down, left or right (never
+          diagonally): those neighbours are consumed and the tile <b>doubles</b>, staying in its cell.
+          If the doubled tile now touches 2 or more of its new value, it merges again, and again, forming
+          a chain. A merge scores the <b>tile created × its chain step</b>: the first merge in a turn is
+          ×1, the second ×2, the third ×3, and so on, so deep chains are where the points are. Tiles are
+          dealt from a shuffled bag of ten (seven 2s, two 4s, one 8), and the game ends when the board is
+          completely full. Dashed outlines mark cells where placing now would merge.
+        </p>
+        <div class="legend" aria-hidden="true">
+          <span class="t2">2</span><span class="t4">4</span><span class="t8">8</span><span class="t16">16</span><span class="t32">32</span><span class="t64">64</span><span class="t128">128</span><span class="t256">256</span><span class="t512">512</span><span class="t1024">1024</span>
+        </div>
+      </details>
+
+      <footer class="note">Free Play deals fresh bags every game. Daily deals everyone the same tile order for the date shown, and replays are allowed while we prototype.</footer>
+    </div>
+
+    <script>
+      "use strict";
+
+      /* ---------- Configuration (board size is a setting, not a magic number) ---------- */
+      var BOARD_SIZE = 5;                 // prototype plays 5x5; 4 and 6 are future player options
+      var BAG_TEMPLATE = [2, 2, 2, 2, 2, 2, 2, 4, 4, 8];
+      var PREVIEW_COUNT = 3;
+
+      /* ---------- Seeded RNG for Daily (mulberry32 over a string hash) ---------- */
+      function hashString(str) {
+        var h = 2166136261;
+        for (var i = 0; i < str.length; i++) {
+          h ^= str.charCodeAt(i);
+          h = Math.imul(h, 16777619);
+        }
+        return h >>> 0;
+      }
+      function mulberry32(seed) {
+        var a = seed >>> 0;
+        return function () {
+          a |= 0; a = (a + 0x6D2B79F5) | 0;
+          var t = Math.imul(a ^ (a >>> 15), 1 | a);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+      function localDateString(d) {
+        var m = String(d.getMonth() + 1).padStart(2, "0");
+        var day = String(d.getDate()).padStart(2, "0");
+        return d.getFullYear() + "-" + m + "-" + day;
+      }
+
+      /* ---------- Game state ---------- */
+      var mode = "free";                  // "free" | "daily"
+      var dailyDate = localDateString(new Date());
+      var rng = Math.random;
+      var board = [];                     // BOARD_SIZE x BOARD_SIZE, 0 = empty
+      var hand = [];                      // drawn tiles waiting: hand[0] is current, rest are preview
+      var handBag = [];                   // bag id each hand tile was drawn from
+      var pool = [];                      // undrawn remainder of the newest bag, in draw order
+      var poolBag = -1;
+      var nextBagId = 0;
+      var score = 0, turns = 0, highest = 0;
+      var best = { free: 0, daily: 0 };   // best score per mode, this session
+      var busy = false, over = false;
+
+      var el = {
+        board: document.getElementById("board"),
+        nowTile: document.getElementById("nowTile"),
+        nextTiles: document.getElementById("nextTiles"),
+        bagCount: document.getElementById("bagCount"),
+        bagLeft: document.getElementById("bagLeft"),
+        statScore: document.getElementById("statScore"),
+        statBest: document.getElementById("statBest"),
+        statHigh: document.getElementById("statHigh"),
+        statTurns: document.getElementById("statTurns"),
+        turnLine: document.getElementById("turnLine"),
+        overlay: document.getElementById("overlay"),
+        overMode: document.getElementById("overMode"),
+        overScore: document.getElementById("overScore"),
+        overHigh: document.getElementById("overHigh"),
+        overTurns: document.getElementById("overTurns"),
+        copyStatus: document.getElementById("copyStatus"),
+        shareText: document.getElementById("shareText"),
+        tabFree: document.getElementById("tabFree"),
+        tabDaily: document.getElementById("tabDaily"),
+        dailySub: document.getElementById("dailySub"),
+        shell: document.querySelector(".board-shell")
+      };
+      el.dailySub.textContent = "Daily · " + dailyDate;
+
+      /* ---------- Sound: fully synthesized with Web Audio, no audio files ---------- */
+      var SOUND_KEY = "chain-placement-sound";
+      var soundOn = true;
+      try {
+        if (window.localStorage.getItem(SOUND_KEY) === "off") soundOn = false;
+      } catch (e) { /* storage unavailable: default to on, in-memory only */ }
+      var audioCtx = null;
+
+      /* Create/resume the context. Called from user-gesture handlers (tile tap,
+         toggle tap) so iOS Safari permits playback. Never throws. */
+      function ensureAudio() {
+        if (!soundOn) return null;
+        try {
+          if (!audioCtx) {
+            var AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return null;
+            audioCtx = new AC();
+          }
+          if (audioCtx.state === "suspended") {
+            var p = audioCtx.resume();
+            if (p && p.catch) p.catch(function () {});
+          }
+          return audioCtx;
+        } catch (e) { return null; }
+      }
+      function tone(ctx, freq, peak, dur, type, glideTo) {
+        var t = ctx.currentTime;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t);
+        if (glideTo) osc.frequency.exponentialRampToValueAtTime(glideTo, t + dur * 0.8);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(peak, t + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + dur + 0.05);
+      }
+      /* Soft, low "thock" when a tile lands. Quiet enough to hear dozens of times. */
+      function playPlace() {
+        var ctx = ensureAudio();
+        if (!ctx) return;
+        try { tone(ctx, 215, 0.20, 0.11, "triangle", 140); } catch (e) {}
+      }
+      /* Brighter chime per merge; each chain step climbs a pentatonic ladder
+         and gains a little presence. Ladder caps at the top rung. */
+      var CHAIN_FREQS = [440, 554.37, 659.25, 783.99, 880, 1108.73, 1318.51];
+      function playMerge(step) {
+        var ctx = ensureAudio();
+        if (!ctx) return;
+        try {
+          var freq = CHAIN_FREQS[Math.min(step - 1, CHAIN_FREQS.length - 1)];
+          var peak = Math.min(0.20 + step * 0.03, 0.34);
+          tone(ctx, freq, peak, 0.30, "sine");
+          tone(ctx, freq * 2, peak * 0.32, 0.18, "sine");
+        } catch (e) {}
+      }
+
+      var soundBtn = document.getElementById("soundBtn");
+      function renderSoundBtn() {
+        soundBtn.setAttribute("aria-pressed", soundOn ? "true" : "false");
+        soundBtn.setAttribute("aria-label", soundOn ? "Sound on" : "Sound off");
+      }
+      soundBtn.addEventListener("click", function () {
+        soundOn = !soundOn;
+        try { window.localStorage.setItem(SOUND_KEY, soundOn ? "on" : "off"); } catch (e) {}
+        renderSoundBtn();
+        if (soundOn) playPlace();   // little confirmation tap, inside the gesture
+      });
+      renderSoundBtn();
+
+      function tileClass(v) {
+        if (v >= 4096) return "tbig";
+        return "t" + v;
+      }
+      function fmt(v) { return v.toLocaleString("en-US"); }
+
+      /* ---------- Tile supply: shuffled bags of 10 ---------- */
+      function refillPool() {
+        var bag = BAG_TEMPLATE.slice();
+        for (var i = bag.length - 1; i > 0; i--) {
+          var j = Math.floor(rng() * (i + 1));
+          var tmp = bag[i]; bag[i] = bag[j]; bag[j] = tmp;
+        }
+        pool = bag;
+        poolBag = nextBagId++;
+      }
+      function drawTile() {
+        if (pool.length === 0) refillPool();
+        var v = pool.shift();
+        return { value: v, bag: poolBag };
+      }
+      function topUpHand() {
+        while (hand.length < PREVIEW_COUNT + 1) {
+          var d = drawTile();
+          hand.push(d.value);
+          handBag.push(d.bag);
+        }
+      }
+      /* Tiles of the current tile's bag that are still to be played (incl. current). */
+      function currentBagRemaining() {
+        var bagId = handBag[0];
+        var values = [];
+        for (var i = 0; i < hand.length; i++) if (handBag[i] === bagId) values.push(hand[i]);
+        if (poolBag === bagId) values = values.concat(pool);
+        return values;
+      }
+
+      /* ---------- Board helpers ---------- */
+      function neighbours(r, c) {
+        var out = [];
+        if (r > 0) out.push([r - 1, c]);
+        if (r < BOARD_SIZE - 1) out.push([r + 1, c]);
+        if (c > 0) out.push([r, c - 1]);
+        if (c < BOARD_SIZE - 1) out.push([r, c + 1]);
+        return out;
+      }
+      function matchingNeighbours(r, c, value) {
+        return neighbours(r, c).filter(function (p) { return board[p[0]][p[1]] === value; });
+      }
+      function boardFull() {
+        for (var r = 0; r < BOARD_SIZE; r++)
+          for (var c = 0; c < BOARD_SIZE; c++)
+            if (board[r][c] === 0) return false;
+        return true;
+      }
+
+      /* ---------- Rendering ---------- */
+      function renderBoard(marks) {
+        marks = marks || {};
+        el.board.style.gridTemplateColumns = "repeat(" + BOARD_SIZE + ", 1fr)";
+        el.board.innerHTML = "";
+        var current = hand[0];
+        for (var r = 0; r < BOARD_SIZE; r++) {
+          for (var c = 0; c < BOARD_SIZE; c++) {
+            (function (r, c) {
+              var v = board[r][c];
+              var cell = document.createElement("button");
+              cell.type = "button";
+              cell.className = "cell";
+              cell.setAttribute("role", "gridcell");
+              if (v !== 0) {
+                cell.classList.add("filled", tileClass(v));
+                cell.textContent = v >= 1000 ? "" : String(v);
+                if (v >= 1000) {
+                  var s = document.createElement("span");
+                  s.className = "small-num";
+                  s.textContent = fmt(v);
+                  cell.appendChild(s);
+                }
+                cell.setAttribute("aria-label", "Tile " + v);
+                cell.disabled = true;
+              } else {
+                cell.setAttribute("aria-label", "Empty cell, row " + (r + 1) + ", column " + (c + 1));
+                if (!over && current !== undefined && matchingNeighbours(r, c, current).length >= 2) {
+                  cell.classList.add("will-merge");
+                }
+                cell.addEventListener("click", function () { place(r, c); });
+              }
+              var key = r + "," + c;
+              if (marks[key]) cell.classList.add(marks[key]);
+              el.board.appendChild(cell);
+            })(r, c);
+          }
+        }
+      }
+      function renderQueue() {
+        var current = hand[0];
+        el.nowTile.textContent = current === undefined ? "–" : String(current);
+        el.nowTile.className = "mini-tile now" + (current !== undefined ? " " + tileClass(current) : "");
+        el.nextTiles.innerHTML = "";
+        for (var i = 1; i <= PREVIEW_COUNT; i++) {
+          var d = document.createElement("div");
+          var v = hand[i];
+          d.className = "mini-tile dim" + (v !== undefined ? " " + tileClass(v) : "");
+          d.textContent = v === undefined ? "" : String(v);
+          el.nextTiles.appendChild(d);
+        }
+        var rem = currentBagRemaining();
+        el.bagCount.textContent = String(rem.length);
+        var counts = {};
+        rem.forEach(function (v) { counts[v] = (counts[v] || 0) + 1; });
+        var parts = Object.keys(counts).sort(function (a, b) { return a - b; })
+          .map(function (k) { return counts[k] + " × " + k; });
+        el.bagLeft.textContent = parts.length ? parts.join(" · ") : "";
+      }
+      function renderStats() {
+        el.statScore.textContent = fmt(score);
+        el.statBest.textContent = fmt(best[mode]);
+        el.statHigh.textContent = highest > 0 ? fmt(highest) : "–";
+        el.statTurns.textContent = String(turns);
+      }
+      function renderAll(marks) { renderBoard(marks); renderQueue(); renderStats(); }
+
+      function floatScore(r, c, points) {
+        var cells = el.board.children;
+        var cell = cells[r * BOARD_SIZE + c];
+        if (!cell) return;
+        var shellRect = el.shell.getBoundingClientRect();
+        var rect = cell.getBoundingClientRect();
+        var f = document.createElement("div");
+        f.className = "float-score";
+        f.textContent = "+" + fmt(points);
+        f.style.left = (rect.left - shellRect.left + rect.width / 2) + "px";
+        f.style.top = (rect.top - shellRect.top + rect.height / 2) + "px";
+        el.shell.appendChild(f);
+        setTimeout(function () { f.remove(); }, 1100);
+      }
+
+      /* ---------- Core turn logic: the sandwich rule, with chains ---------- */
+      function sleep(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
+
+      async function place(r, c) {
+        if (busy || over) return;
+        if (board[r][c] !== 0) return;
+        busy = true;
+        var value = hand.shift();
+        handBag.shift();
+        board[r][c] = value;
+        turns++;
+        if (value > highest) highest = value;
+        var marks = {};
+        marks[r + "," + c] = "just-placed";
+        renderAll(marks);
+        playPlace();
+        await sleep(190);
+
+        var total = 0, step = 0;
+        while (true) {
+          var matches = matchingNeighbours(r, c, board[r][c]);
+          if (matches.length < 2) break;
+          step++;
+          var cmarks = {};
+          matches.forEach(function (p) { cmarks[p[0] + "," + p[1]] = "consumed"; });
+          cmarks[r + "," + c] = "merging";
+          renderAll(cmarks);
+          await sleep(300);
+          matches.forEach(function (p) { board[p[0]][p[1]] = 0; });
+          board[r][c] = board[r][c] * 2;
+          var created = board[r][c];
+          if (created > highest) highest = created;
+          var gained = created * step;
+          total += gained;
+          score += gained;
+          var pmarks = {};
+          pmarks[r + "," + c] = "merging";
+          renderAll(pmarks);
+          playMerge(step);
+          await sleep(240);
+        }
+
+        topUpHand();
+
+        if (total > 0) {
+          floatScore(r, c, total);
+          if (step >= 2) {
+            var span = document.createElement("span");
+            span.className = "chain";
+            span.textContent = "Chain of " + step + "! ";
+            el.turnLine.innerHTML = "";
+            el.turnLine.appendChild(span);
+            var b = document.createElement("b");
+            b.textContent = "+" + fmt(total) + " points";
+            el.turnLine.appendChild(b);
+            el.turnLine.appendChild(document.createTextNode(" for that placement."));
+          } else {
+            el.turnLine.innerHTML = "";
+            var b2 = document.createElement("b");
+            b2.textContent = "+" + fmt(total) + " points";
+            el.turnLine.appendChild(b2);
+            el.turnLine.appendChild(document.createTextNode(" — merged into a " + fmt(board[r][c]) + "."));
+          }
+        } else {
+          el.turnLine.textContent = "No merge — the " + value + " sits there as bait. Build a second match beside it.";
+        }
+
+        if (score > best[mode]) best[mode] = score;
+        renderAll();
+        busy = false;
+
+        if (boardFull()) endGame();
+      }
+
+      /* ---------- Game lifecycle ---------- */
+      function startGame() {
+        dailyDate = localDateString(new Date());
+        el.dailySub.textContent = "Daily · " + dailyDate;
+        rng = mode === "daily" ? mulberry32(hashString("chain-placement:" + dailyDate)) : Math.random;
+        board = [];
+        for (var r = 0; r < BOARD_SIZE; r++) board.push(new Array(BOARD_SIZE).fill(0));
+        hand = []; handBag = []; pool = []; poolBag = -1; nextBagId = 0;
+        score = 0; turns = 0; highest = 0;
+        busy = false; over = false;
+        el.overlay.classList.remove("open");
+        el.copyStatus.textContent = "";
+        el.shareText.classList.remove("show");
+        el.turnLine.textContent = mode === "daily"
+          ? "Daily " + dailyDate + " — everyone gets this exact tile order. Tap an empty cell."
+          : "Tap an empty cell to place the tile.";
+        topUpHand();
+        renderAll();
+      }
+      function endGame() {
+        over = true;
+        if (score > best[mode]) best[mode] = score;
+        renderStats();
+        el.overMode.textContent = mode === "daily"
+          ? "Daily · " + dailyDate
+          : "Free Play";
+        el.overScore.textContent = fmt(score);
+        el.overHigh.textContent = highest > 0 ? fmt(highest) : "–";
+        el.overTurns.textContent = String(turns);
+        el.overlay.classList.add("open");
+      }
+      function shareString() {
+        var label = mode === "daily" ? "Daily " + dailyDate : "Free Play";
+        return "Chain Placement (" + label + ") - Score " + score +
+          ", Highest tile " + highest + ", Turns " + turns;
+      }
+
+      /* ---------- Controls ---------- */
+      function setMode(next) {
+        if (mode === next) return;
+        mode = next;
+        el.tabFree.setAttribute("aria-selected", mode === "free" ? "true" : "false");
+        el.tabDaily.setAttribute("aria-selected", mode === "daily" ? "true" : "false");
+        startGame();
+      }
+      el.tabFree.addEventListener("click", function () { setMode("free"); });
+      el.tabDaily.addEventListener("click", function () { setMode("daily"); });
+      document.getElementById("newGameBtn").addEventListener("click", startGame);
+      document.getElementById("againBtn").addEventListener("click", startGame);
+      document.getElementById("copyBtn").addEventListener("click", function () {
+        var text = shareString();
+        el.shareText.value = text;
+        function done(ok) {
+          el.copyStatus.textContent = ok ? "Copied — paste it anywhere." : "Copy blocked here; the result text is shown below to copy by hand.";
+          if (!ok) { el.shareText.classList.add("show"); el.shareText.select(); }
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { done(true); }, function () { fallback(); });
+        } else { fallback(); }
+        function fallback() {
+          el.shareText.classList.add("show");
+          el.shareText.select();
+          var ok = false;
+          try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+          done(ok);
+        }
+      });
+
+      startGame();
+    </script>
+  </body>
+</html>
