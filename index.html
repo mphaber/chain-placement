@@ -644,10 +644,25 @@
       } catch (e) { /* storage unavailable: default to on, in-memory only */ }
       var audioCtx = null;
 
+      /* Declare the page's web audio session as "ambient" so our short sounds
+         mix with other apps' audio (e.g. a podcast) instead of interrupting it.
+         Supported in Safari on iOS 17+ via navigator.audioSession; everywhere
+         else this is a silent no-op. Guarded so it can never throw. Tradeoff:
+         ambient audio respects the phone's silent switch. */
+      function declareAmbientAudioSession() {
+        try {
+          if ("audioSession" in navigator) {
+            navigator.audioSession.type = "ambient";
+          }
+        } catch (e) { /* unsupported or refused: behave exactly as before */ }
+      }
+      declareAmbientAudioSession();
+
       /* Create/resume the context. Called from user-gesture handlers (tile tap,
          toggle tap) so iOS Safari permits playback. Never throws. */
       function ensureAudio() {
         if (!soundOn) return null;
+        declareAmbientAudioSession();
         try {
           if (!audioCtx) {
             var AC = window.AudioContext || window.webkitAudioContext;
