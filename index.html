@@ -22,6 +22,11 @@
         --good: #3f7a4e;
         --shadow: 0 10px 30px rgba(46, 38, 22, 0.14);
         --radius: 14px;
+        --board-deep: #e2dac6;
+        --board-hi: rgba(255, 255, 255, 0.55);
+        --card-shadow: 0 2px 8px rgba(46, 38, 22, 0.06);
+        --page-glow: rgba(217, 154, 85, 0.17);
+        --page-deep: #eae0cb;
       }
       @media (prefers-color-scheme: dark) {
         :root {
@@ -38,12 +43,19 @@
           --merge-ring: #e0a34e;
           --good: #7fc48f;
           --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+          --board-deep: #22242a;
+          --board-hi: rgba(255, 255, 255, 0.06);
+          --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+          --page-glow: rgba(217, 154, 85, 0.09);
+          --page-deep: #101116;
         }
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; }
       body {
-        background: var(--bg);
+        background:
+          radial-gradient(1100px 520px at 50% -8%, var(--page-glow), rgba(0, 0, 0, 0) 62%),
+          linear-gradient(180deg, var(--bg) 0%, var(--page-deep) 135%);
         color: var(--ink);
         font-family: ui-sans-system, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         -webkit-font-smoothing: antialiased;
@@ -68,6 +80,7 @@
         letter-spacing: 0.2px;
         margin: 0;
       }
+      h1 .accent-word { color: var(--accent); }
       .tagline {
         color: var(--ink-soft);
         font-size: 13px;
@@ -87,15 +100,22 @@
       }
       .new-btn:active { transform: scale(0.97); }
       .top-actions { display: flex; gap: 8px; flex: none; align-items: center; }
-      .sound-btn { display: inline-flex; align-items: center; gap: 6px; }
+      .sound-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; }
+      .sound-btn .btn-label { display: none; }
       .sound-btn .ic { width: 15px; height: 15px; flex: none; display: block; }
       .sound-btn .ic-off { display: none; }
       .sound-btn[aria-pressed="false"] { color: var(--ink-soft); }
       .sound-btn[aria-pressed="false"] .ic-on { display: none; }
       .sound-btn[aria-pressed="false"] .ic-off { display: block; }
+      .help-btn .q { font-weight: 800; color: var(--accent); margin-right: 5px; }
       @media (max-width: 430px) {
-        .sound-btn .btn-label { display: none; }
+        h1 { font-size: 23px; }
+        header.top { gap: 10px; }
+        .top-actions { gap: 6px; }
+        .new-btn { padding: 8px 11px; }
         .sound-btn { padding: 8px 10px; }
+        .help-btn .btn-label { display: none; }
+        .help-btn .q { margin-right: 0; }
       }
 
       /* Mode tabs */
@@ -140,6 +160,7 @@
         border-radius: var(--radius);
         padding: 8px 6px 9px;
         text-align: center;
+        box-shadow: var(--card-shadow);
       }
       .stat .k { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
       .stat .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
@@ -154,6 +175,7 @@
         border-radius: var(--radius);
         padding: 12px 14px;
         margin-bottom: 8px;
+        box-shadow: var(--card-shadow);
       }
       .queue .now-label, .queue .next-label {
         font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 5px;
@@ -170,7 +192,7 @@
         display: flex; align-items: center; justify-content: center;
         font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums;
       }
-      .mini-tile.now { width: 54px; height: 54px; font-size: 22px; border-radius: 12px; box-shadow: inset 0 0 0 2px rgba(0,0,0,0.14); }
+      .mini-tile.now { width: 54px; height: 54px; font-size: 22px; border-radius: 12px; box-shadow: 0 0 0 2px var(--surface), 0 0 0 4.5px var(--merge-ring), 0 4px 14px rgba(180, 118, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
       .mini-tile.dim { opacity: 0.88; }
 
       .turn-line {
@@ -188,10 +210,11 @@
       .board {
         display: grid;
         gap: 7px;
-        background: var(--surface-2);
+        background: linear-gradient(180deg, var(--surface-2), var(--board-deep));
         border: 1px solid var(--line);
         border-radius: 18px;
         padding: 10px;
+        box-shadow: var(--shadow), inset 0 1px 0 var(--board-hi);
         touch-action: manipulation;
         user-select: none;
         -webkit-user-select: none;
@@ -211,6 +234,7 @@
         color: inherit;
         position: relative;
         cursor: pointer;
+        box-shadow: inset 0 2px 5px rgba(64, 52, 28, 0.08);
       }
       button.cell.filled { cursor: default; border-color: rgba(0,0,0,0.10); }
       .cell.will-merge::after {
@@ -281,6 +305,20 @@
         .t2048 { background: #3d7a68; color: #e8f6f0; }
         .tbig  { background: #2f6b5e; color: #eafaf4; }
       }
+      /* Tile finish: soft sheen, inner depth, gentle drop shadow, so tiles
+         read as physical pieces. Higher values get a touch more presence. */
+      .t2, .t4, .t8, .t16, .t32, .t64, .t128, .t256, .t512, .t1024, .t2048, .tbig {
+        background-image: linear-gradient(165deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 52%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 6px rgba(31, 24, 10, 0.12), 0 2px 5px rgba(31, 24, 10, 0.18);
+      }
+      .t128, .t256, .t512, .t1024, .t2048, .tbig {
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 -3px 6px rgba(31, 24, 10, 0.12), 0 2px 8px rgba(31, 24, 10, 0.2), 0 0 12px rgba(217, 164, 65, 0.28);
+      }
+      @media (prefers-color-scheme: dark) {
+        .t2, .t4, .t8, .t16, .t32, .t64, .t128, .t256, .t512, .t1024, .t2048, .tbig {
+          background-image: linear-gradient(165deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 52%);
+        }
+      }
       .cell .small-num { font-size: 0.72em; }
 
       /* Game over overlay */
@@ -332,22 +370,69 @@
       }
       .share-text.show { display: block; }
 
-      details.howto {
-        margin-top: 18px;
-        background: var(--surface);
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        padding: 12px 16px;
+      /* How-to-play entry points */
+      .help-row { text-align: center; margin-top: 14px; }
+      .help-link {
+        background: none; border: 0; font: inherit; font-size: 13.5px; font-weight: 600;
+        color: var(--accent); cursor: pointer; padding: 6px 10px;
+        text-decoration: underline; text-underline-offset: 3px;
+        text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
       }
-      details.howto summary {
-        font-weight: 600; font-size: 14.5px; cursor: pointer;
+      .first-hint {
+        display: none; align-items: center; gap: 10px;
+        margin-top: 14px; padding: 10px 14px;
+        background: var(--surface); border: 1px solid var(--line);
+        border-radius: var(--radius); box-shadow: var(--card-shadow);
+        font-size: 13.5px; color: var(--ink-soft);
       }
-      details.howto p { font-size: 14px; line-height: 1.55; color: var(--ink-soft); margin: 10px 0 4px; }
-      details.howto p b { color: var(--ink); }
-      .legend { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
-      .legend span {
-        font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+      .first-hint.show { display: flex; }
+      .first-hint .hint-open {
+        background: none; border: 0; font: inherit; font-weight: 700; color: var(--accent);
+        cursor: pointer; padding: 2px 0; white-space: nowrap;
       }
+      .first-hint .hint-dismiss {
+        margin-left: auto; flex: none;
+        background: none; border: 0; font: inherit; font-size: 17px; line-height: 1;
+        color: var(--ink-soft); cursor: pointer; padding: 4px 6px;
+      }
+
+      /* Tutorial overlay */
+      .tut-overlay {
+        position: fixed; inset: 0; z-index: 50;
+        display: none; align-items: center; justify-content: center;
+        padding: 16px;
+        background: rgba(26, 21, 12, 0.52);
+      }
+      .tut-overlay.open { display: flex; }
+      .tut-panel {
+        position: relative;
+        width: 100%; max-width: 432px;
+        max-height: calc(100vh - 32px); overflow-y: auto;
+        background: var(--surface); color: var(--ink);
+        border: 1px solid var(--line); border-radius: 18px;
+        box-shadow: var(--shadow);
+        padding: 20px 20px 18px;
+      }
+      .tut-panel h2 { font-family: Georgia, "Iowan Old Style", serif; font-size: 21px; font-weight: 600; margin: 0 40px 2px 0; }
+      .tut-x {
+        position: absolute; top: 8px; right: 8px;
+        width: 34px; height: 34px; border-radius: 999px;
+        border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+        font: inherit; font-size: 17px; line-height: 1; cursor: pointer;
+      }
+      .tut-step { margin-top: 15px; }
+      .tut-step h3 { font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--accent); margin: 0 0 4px; }
+      .tut-step p { font-size: 14px; line-height: 1.55; color: var(--ink-soft); margin: 0; }
+      .tut-step p b, .score-example b { color: var(--ink); }
+      .demo-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; }
+      .demo { display: grid; grid-template-columns: repeat(3, 30px); gap: 4px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 5px; }
+      .demo i { width: 30px; height: 30px; border-radius: 7px; background: var(--cell); border: 1px solid var(--cell-edge); display: flex; align-items: center; justify-content: center; font-style: normal; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
+      .demo i.placed { box-shadow: inset 0 0 0 2px var(--merge-ring), 0 2px 5px rgba(31, 24, 10, 0.18); }
+      .demo-cap { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); text-align: center; margin-top: 5px; }
+      .demo-arrow { color: var(--accent); font-weight: 700; font-size: 18px; padding-top: 22px; }
+      .score-example { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font-size: 13.5px; line-height: 1.6; color: var(--ink-soft); margin-top: 10px; }
+      .tut-end { font-size: 13.5px; line-height: 1.55; color: var(--ink-soft); margin: 15px 0 0; }
+      .tut-close { width: 100%; margin-top: 16px; }
       footer.note { text-align: center; color: var(--ink-soft); font-size: 12px; margin-top: 16px; }
     </style>
   </head>
@@ -355,10 +440,11 @@
     <div class="wrap">
       <header class="top">
         <div>
-          <h1>Chain Placement</h1>
+          <h1>Chain <span class="accent-word">Placement</span></h1>
           <p class="tagline">Set the trap. Spring the chain.</p>
         </div>
         <div class="top-actions">
+          <button class="new-btn help-btn" id="helpBtn" type="button" aria-label="How to play"><span class="q" aria-hidden="true">?</span><span class="btn-label">How to play</span></button>
           <button class="new-btn sound-btn" id="soundBtn" type="button" aria-pressed="true" aria-label="Sound on">
             <svg class="ic ic-on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9.5v5h3.5L12 19.5v-15L6.5 9.5H3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.4 7.4 0 0 1 0 10.4"/></svg>
             <svg class="ic ic-off" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9.5v5h3.5L12 19.5v-15L6.5 9.5H3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
@@ -425,22 +511,56 @@
         </div>
       </div>
 
-      <details class="howto">
-        <summary>How to play</summary>
-        <p>
-          Tap an empty cell to place the tile shown under <b>Place next</b>. A tile merges only when it
-          touches <b>at least 2 tiles of the same value</b> directly up, down, left or right (never
-          diagonally): those neighbours are consumed and the tile <b>doubles</b>, staying in its cell.
-          If the doubled tile now touches 2 or more of its new value, it merges again, and again, forming
-          a chain. A merge scores the <b>tile created × its chain step</b>: the first merge in a turn is
-          ×1, the second ×2, the third ×3, and so on, so deep chains are where the points are. Tiles are
-          dealt from a shuffled bag of ten (seven 2s, two 4s, one 8), and the game ends when the board is
-          completely full. Dashed outlines mark cells where placing now would merge.
-        </p>
-        <div class="legend" aria-hidden="true">
-          <span class="t2">2</span><span class="t4">4</span><span class="t8">8</span><span class="t16">16</span><span class="t32">32</span><span class="t64">64</span><span class="t128">128</span><span class="t256">256</span><span class="t512">512</span><span class="t1024">1024</span>
+      <div class="first-hint" id="firstHint">
+        <span>New here? The rules take about 30 seconds.</span>
+        <button type="button" class="hint-open" id="hintOpen">How to play</button>
+        <button type="button" class="hint-dismiss" id="hintDismiss" aria-label="Dismiss hint">×</button>
+      </div>
+
+      <div class="help-row">
+        <button type="button" class="help-link" id="helpLink">How to play</button>
+      </div>
+
+      <div class="tut-overlay" id="tutOverlay">
+        <div class="tut-panel" role="dialog" aria-modal="true" aria-labelledby="tutTitle">
+          <button class="tut-x" id="tutX" type="button" aria-label="Close tutorial">×</button>
+          <h2 id="tutTitle">How to play</h2>
+          <div class="tut-step">
+            <h3>1 · Place</h3>
+            <p>Tap an empty square to place the tile shown. Tiles come from a bag of 10 (mostly 2s, some 4s, one 8). You can always see the next 3.</p>
+          </div>
+          <div class="tut-step">
+            <h3>2 · Merge</h3>
+            <p>A tile merges only when it lands touching <b>2 or more tiles of the same number</b>, up, down, left or right (diagonals do not count). The matching tiles collapse into it and it <b>doubles</b>. One matching neighbour is not enough: use those as bait for a trap.</p>
+            <div class="demo-row">
+              <div class="demo-wrap">
+                <div class="demo" aria-hidden="true">
+                  <i></i><i></i><i></i>
+                  <i class="t2">2</i><i class="t2 placed">2</i><i class="t2">2</i>
+                  <i></i><i></i><i></i>
+                </div>
+                <div class="demo-cap">Before</div>
+              </div>
+              <div class="demo-arrow" aria-hidden="true">→</div>
+              <div class="demo-wrap">
+                <div class="demo" aria-hidden="true">
+                  <i></i><i></i><i></i>
+                  <i></i><i class="t4">4</i><i></i>
+                  <i></i><i></i><i></i>
+                </div>
+                <div class="demo-cap">After</div>
+              </div>
+            </div>
+          </div>
+          <div class="tut-step">
+            <h3>3 · Chain &amp; score</h3>
+            <p>If the new tile now touches 2+ of its new number, it merges again: a <b>chain</b>. Each merge scores the <b>tile created × its step</b> in the chain: 1st merge ×1, 2nd ×2, 3rd ×3.</p>
+            <div class="score-example">2s make a <b>4</b> (4 pts) → that 4 makes an <b>8</b> (8 × 2 = 16 pts) → that 8 makes a <b>16</b> (16 × 3 = 48 pts). One tap: <b>68 points</b>.</div>
+          </div>
+          <p class="tut-end">The game ends when the board is full. In Daily, everyone gets the same tiles that day.</p>
+          <button class="btn primary tut-close" id="tutClose" type="button">Got it</button>
         </div>
-      </details>
+      </div>
 
       <footer class="note">Free Play deals fresh bags every game. Daily deals everyone the same tile order for the date shown, and replays are allowed while we prototype.</footer>
     </div>
@@ -868,6 +988,44 @@
           done(ok);
         }
       });
+
+      /* ---------- Tutorial overlay: purely visual, never touches game state ---------- */
+      var TUT_KEY = "chain-placement-tutorial-seen";
+      var tutOverlay = document.getElementById("tutOverlay");
+      var firstHint = document.getElementById("firstHint");
+      var lastFocus = null;
+      function markTutSeen() {
+        try { window.localStorage.setItem(TUT_KEY, "1"); } catch (e) { /* in-memory only */ }
+      }
+      function hideHint() { firstHint.classList.remove("show"); }
+      function openTut() {
+        lastFocus = document.activeElement;
+        markTutSeen();
+        hideHint();
+        tutOverlay.classList.add("open");
+        var closeBtn = document.getElementById("tutClose");
+        if (closeBtn) closeBtn.focus();
+      }
+      function closeTut() {
+        tutOverlay.classList.remove("open");
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+      }
+      document.getElementById("helpBtn").addEventListener("click", openTut);
+      document.getElementById("helpLink").addEventListener("click", openTut);
+      document.getElementById("hintOpen").addEventListener("click", openTut);
+      document.getElementById("tutClose").addEventListener("click", closeTut);
+      document.getElementById("tutX").addEventListener("click", closeTut);
+      tutOverlay.addEventListener("click", function (e) { if (e.target === tutOverlay) closeTut(); });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && tutOverlay.classList.contains("open")) closeTut();
+      });
+      document.getElementById("hintDismiss").addEventListener("click", function () {
+        markTutSeen();
+        hideHint();
+      });
+      var tutSeen = false;
+      try { tutSeen = window.localStorage.getItem(TUT_KEY) === "1"; } catch (e) { tutSeen = false; }
+      if (!tutSeen) firstHint.classList.add("show");
 
       startGame();
     </script>
