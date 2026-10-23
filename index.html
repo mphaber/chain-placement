@@ -161,9 +161,17 @@
         padding: 8px 6px 9px;
         text-align: center;
         box-shadow: var(--card-shadow);
+        display: flex;
+        flex-direction: column;
       }
-      .stat .k { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
-      .stat .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
+      /* Every label reserves exactly two lines of height: "HIGHEST TILE"
+         wraps onto two lines in its narrow card while the other labels fit
+         on one, and without the reserve its value sat lower than the rest.
+         A uniform label block (plus the value pinned to the bottom of the
+         card) keeps all four values on the same baseline. The label is
+         never truncated or clipped. */
+      .stat .k { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); line-height: 1.3; min-height: 2.6em; }
+      .stat .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; margin-top: auto; }
 
       /* Tile queue */
       .queue {
