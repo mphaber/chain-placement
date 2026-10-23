@@ -214,6 +214,25 @@
       .mini-tile.now { width: 54px; height: 54px; font-size: 22px; border-radius: 12px; box-shadow: 0 0 0 2px var(--surface), 0 0 0 4.5px var(--merge-ring), 0 4px 14px rgba(180, 118, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
       .mini-tile.dim { opacity: 0.88; }
 
+      /* Shuffle control: its own fixed-height row under the queue card, so
+         showing, hiding, or disabling it can never shift the board. */
+      .shuffle-row { display: flex; justify-content: flex-end; align-items: center; height: 34px; }
+      .shuffle-btn {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--ink);
+        font: inherit;
+        font-size: 12.5px;
+        font-weight: 600;
+        padding: 6px 13px;
+        border-radius: 999px;
+        cursor: pointer;
+        box-shadow: var(--card-shadow);
+      }
+      .shuffle-btn:active { transform: scale(0.97); }
+      .shuffle-btn:disabled { opacity: 0.45; cursor: default; }
+      .shuffle-btn:disabled:active { transform: none; }
+
       .turn-line {
         /* Fixed height (3 lines at this size) so the board and everything
            around it never shift when the feedback message changes length. */
@@ -557,6 +576,10 @@
         </div>
       </section>
 
+      <div class="shuffle-row">
+        <button class="shuffle-btn" id="shuffleBtn" type="button">Shuffle <span id="shuffleCount">(1)</span></button>
+      </div>
+
       <div class="turn-line" id="turnLine">Tap an empty cell to place the tile.</div>
 
       <div class="board-shell">
@@ -596,11 +619,11 @@
           <h2 id="tutTitle">How to play</h2>
           <div class="tut-step">
             <h3>1 · Place</h3>
-            <p>Tap an empty square to place the tile shown. Tiles come from a bag of 10 (mostly 2s, some 4s, one 8). You can always see the next 3.</p>
+            <p>Tap an empty square to place the tile shown. Tiles come from a bag of 10 (mostly 2s, some 4s, one 8). You can always see the next 3. Stuck with a bad order? Shuffle reorders the tiles still in the bag: you start with 1 shuffle and earn another each time you finish a bag, up to 2.</p>
           </div>
           <div class="tut-step">
             <h3>2 · Merge</h3>
-            <p>A tile merges when it joins a <b>connected group of 3 or more</b> tiles of the same number, counting the tile you placed. Connections run up, down, left or right; diagonals do not count. Drop it between two singles to join them, or next to a pair to complete it. The whole group collapses into your tile and it <b>doubles</b>. A group of 1 or 2 just sits there: bait for a trap.</p>
+            <p>A tile merges when it joins a <b>connected group of 3 or more</b> tiles of the same number, counting the tile you placed. Connections run up, down, left or right; diagonals do not count. Drop it between two singles to join them, or next to a pair to complete it. The whole group collapses into your tile and it <b>doubles</b>. A group of 1 or 2 just sits there: bait for a trap. Big tiles are unstable: at 64 and up, a connected pair is enough to merge, which is how chains keep rolling at the top end.</p>
             <div class="demo-row">
               <div class="demo-wrap">
                 <div class="demo" aria-hidden="true">
@@ -646,6 +669,8 @@
       var BOARD_SIZE = 5;                 // prototype plays 5x5; 4 and 6 are future player options
       var BAG_TEMPLATE = [2, 2, 2, 2, 2, 2, 2, 4, 4, 8];
       var PREVIEW_COUNT = 3;
+      var PAIR_MERGE_MIN = 64;            // tiles at this value or higher merge in a connected pair (2+); below it, groups need 3+
+      var SHUFFLE_MAX = 2;                // shuffle charges: start each game with 1, +1 per completed bag, hold at most 2
 
       /* ---------- Seeded RNG for Daily (mulberry32 over a string hash) ---------- */
       function hashString(str) {
@@ -679,8 +704,12 @@
       var hand = [];                      // drawn tiles waiting: hand[0] is current, rest are preview
       var handBag = [];                   // bag id each hand tile was drawn from
       var pool = [];                      // undrawn remainder of the newest bag, in draw order
+      var poolBags = [];                  // bag id for each pool tile (parallel to pool; a shuffle can mix bags in the pool)
       var poolBag = -1;
       var nextBagId = 0;
+      var shuffleCharges = 1;             // limited-use bag shuffle charges for this game
+      var bagsStarted = 0;                // bags dealt this game; completing one (past the first) earns a shuffle charge
+      var pendingShuffleNote = false;     // a charge was earned during this turn's draws: note it in the feedback line
       var score = 0, turns = 0, highest = 0;
       var best = { free: 0, daily: 0 };   // best score per mode, this session
       var busy = false, over = false;
@@ -706,6 +735,8 @@
         tabFree: document.getElementById("tabFree"),
         tabDaily: document.getElementById("tabDaily"),
         dailySub: document.getElementById("dailySub"),
+        shuffleBtn: document.getElementById("shuffleBtn"),
+        shuffleCount: document.getElementById("shuffleCount"),
         shell: document.querySelector(".board-shell")
       };
       el.dailySub.textContent = "Daily · " + dailyDate;
@@ -813,6 +844,36 @@
           clickTransient(ctx, 0.22);
         } catch (e) {}
       }
+      /* Shuffle sound: a soft three-burst riffle of filtered noise, like
+         tiles being stirred in the bag. Synthesized, no files. */
+      function noiseBurst(ctx, peak, delay, freq) {
+        var t = ctx.currentTime + (delay || 0);
+        var len = Math.max(1, Math.floor(ctx.sampleRate * 0.05));
+        var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        var data = buf.getChannelData(0);
+        for (var i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+        var src = ctx.createBufferSource();
+        src.buffer = buf;
+        var filter = ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.value = freq;
+        filter.Q.value = 0.7;
+        var gain = ctx.createGain();
+        gain.gain.value = peak;
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        src.start(t);
+      }
+      function playShuffle() {
+        var ctx = ensureAudio();
+        if (!ctx) return;
+        try {
+          noiseBurst(ctx, 0.13, 0, 1100);
+          noiseBurst(ctx, 0.17, 0.07, 1650);
+          noiseBurst(ctx, 0.11, 0.14, 1300);
+        } catch (e) {}
+      }
       /* Chain reward: one bright ascending arpeggio flourish per placement
          that chains (2+ merge steps), played after the final merge lands.
          Longer chains (3+) add a fifth, higher note. Under 0.7s total. */
@@ -870,11 +931,21 @@
         }
         pool = bag;
         poolBag = nextBagId++;
+        poolBags = [];
+        for (var k = 0; k < bag.length; k++) poolBags.push(poolBag);
+        /* Dealing a fresh bag means the previous bag is complete: earn a
+           shuffle charge, up to the cap. The game's first bag earns nothing. */
+        if (bagsStarted > 0 && shuffleCharges < SHUFFLE_MAX) {
+          shuffleCharges++;
+          pendingShuffleNote = true;
+        }
+        bagsStarted++;
       }
       function drawTile() {
         if (pool.length === 0) refillPool();
         var v = pool.shift();
-        return { value: v, bag: poolBag };
+        var b = poolBags.shift();
+        return { value: v, bag: b };
       }
       function topUpHand() {
         while (hand.length < PREVIEW_COUNT + 1) {
@@ -888,8 +959,36 @@
         var bagId = handBag[0];
         var values = [];
         for (var i = 0; i < hand.length; i++) if (handBag[i] === bagId) values.push(hand[i]);
-        if (poolBag === bagId) values = values.concat(pool);
+        for (var j = 0; j < pool.length; j++) if (poolBags[j] === bagId) values.push(pool[j]);
         return values;
+      }
+
+      /* ---------- Limited-use bag shuffle ----------
+         Pools every undealt tile (current tile, the visible queue, and the
+         rest of the bag) and deals them back in a new order drawn from the
+         game's own RNG stream, so Daily stays deterministic for identical
+         play histories. The multiset of undealt tiles never changes; the
+         board, score, and turns are untouched, and it costs no turn. */
+      function doShuffle() {
+        if (busy || over || shuffleCharges <= 0) return;
+        var entries = [];
+        var i, e;
+        for (i = 0; i < hand.length; i++) entries.push({ value: hand[i], bag: handBag[i] });
+        for (i = 0; i < pool.length; i++) entries.push({ value: pool[i], bag: poolBags[i] });
+        for (i = entries.length - 1; i > 0; i--) {
+          var j = Math.floor(rng() * (i + 1));
+          var tmp = entries[i]; entries[i] = entries[j]; entries[j] = tmp;
+        }
+        hand = []; handBag = []; pool = []; poolBags = [];
+        for (e = 0; e < entries.length; e++) {
+          if (e < PREVIEW_COUNT + 1) { hand.push(entries[e].value); handBag.push(entries[e].bag); }
+          else { pool.push(entries[e].value); poolBags.push(entries[e].bag); }
+        }
+        shuffleCharges--;
+        playShuffle();
+        el.turnLine.textContent = "Bag shuffled: the undealt tiles are in a new order. " +
+          shuffleCharges + (shuffleCharges === 1 ? " shuffle" : " shuffles") + " left.";
+        renderAll();
       }
 
       /* ---------- Board helpers ---------- */
@@ -924,12 +1023,19 @@
         }
         return comp;
       }
-      /* Would placing `value` on the empty cell (r, c) make a component of 3+? */
+      /* Minimum connected group size for a tile of this value to merge:
+         3 for ordinary tiles, 2 once a tile reaches PAIR_MERGE_MIN (64).
+         Bag tiles are never above 8, so pair merges can only fire during
+         chain steps, when a merge creates a 64+ tile in the placed cell. */
+      function mergeThreshold(value) {
+        return value >= PAIR_MERGE_MIN ? 2 : 3;
+      }
+      /* Would placing `value` on the empty cell (r, c) complete a merge? */
       function wouldMerge(r, c, value) {
         board[r][c] = value;
         var n = componentAt(r, c, value).length;
         board[r][c] = 0;
-        return n >= 3;
+        return n >= mergeThreshold(value);
       }
       function boardFull() {
         for (var r = 0; r < BOARD_SIZE; r++)
@@ -1003,7 +1109,11 @@
         el.statHigh.textContent = highest > 0 ? fmt(highest) : "–";
         el.statTurns.textContent = String(turns);
       }
-      function renderAll(marks) { renderBoard(marks); renderQueue(); renderStats(); }
+      function renderShuffleBtn() {
+        el.shuffleCount.textContent = "(" + shuffleCharges + ")";
+        el.shuffleBtn.disabled = shuffleCharges <= 0 || busy || over;
+      }
+      function renderAll(marks) { renderBoard(marks); renderQueue(); renderStats(); renderShuffleBtn(); }
 
       function floatScore(r, c, points, chained) {
         var cells = el.board.children;
@@ -1063,8 +1173,9 @@
 
         var total = 0, step = 0;
         while (true) {
-          var comp = componentAt(r, c, board[r][c]);
-          if (comp.length < 3) break;
+          var curVal = board[r][c];
+          var comp = componentAt(r, c, curVal);
+          if (comp.length < mergeThreshold(curVal)) break;
           var matches = comp.filter(function (p) { return !(p[0] === r && p[1] === c); });
           step++;
           var cmarks = {};
@@ -1111,6 +1222,13 @@
           el.turnLine.textContent = "No merge — a group needs 3 connected tiles of the same number. The " + value + " sits there as bait; complete its group to spring it.";
         }
 
+        /* A fresh bag was dealt during this turn's draws and a shuffle
+           charge was actually gained: say so on this turn's feedback line. */
+        if (pendingShuffleNote) {
+          pendingShuffleNote = false;
+          el.turnLine.appendChild(document.createTextNode(" +1 shuffle."));
+        }
+
         if (score > best[mode]) best[mode] = score;
         var endMarks = {};
         if (chained) endMarks[r + "," + c] = "chain-celebrated";
@@ -1127,6 +1245,7 @@
           }
         }
         busy = false;
+        renderShuffleBtn();
 
         if (boardFull()) endGame();
       }
@@ -1138,7 +1257,8 @@
         rng = mode === "daily" ? mulberry32(hashString("chain-placement:" + dailyDate)) : Math.random;
         board = [];
         for (var r = 0; r < BOARD_SIZE; r++) board.push(new Array(BOARD_SIZE).fill(0));
-        hand = []; handBag = []; pool = []; poolBag = -1; nextBagId = 0;
+        hand = []; handBag = []; pool = []; poolBags = []; poolBag = -1; nextBagId = 0;
+        shuffleCharges = 1; bagsStarted = 0; pendingShuffleNote = false;
         score = 0; turns = 0; highest = 0;
         busy = false; over = false;
         el.overlay.classList.remove("open");
@@ -1154,6 +1274,7 @@
         over = true;
         if (score > best[mode]) best[mode] = score;
         renderStats();
+        renderShuffleBtn();
         el.overMode.textContent = mode === "daily"
           ? "Daily · " + dailyDate
           : "Free Play";
@@ -1178,6 +1299,7 @@
       }
       el.tabFree.addEventListener("click", function () { setMode("free"); });
       el.tabDaily.addEventListener("click", function () { setMode("daily"); });
+      el.shuffleBtn.addEventListener("click", doShuffle);
       document.getElementById("newGameBtn").addEventListener("click", startGame);
       document.getElementById("againBtn").addEventListener("click", startGame);
       document.getElementById("copyBtn").addEventListener("click", function () {
