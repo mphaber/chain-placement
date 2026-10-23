@@ -1,6 +1,6 @@
 # Chain Placement
 
-Chain Placement is a strategic tile placement game played on a 5x5 board. Place each tile where it counts: a tile merges and doubles only when it is placed touching at least 2 matching orthogonal neighbours (up, down, left, right), and every merge can trigger the next one, with chains multiplying your score. Tiles come from a shuffled bag of 10 (seven 2s, two 4s, one 8) with the next 3 tiles visible, so you always know what is left to come. The game ends when the board is full. It has two modes: Free Play with random bags, and Daily, where the bags are seeded by the date so everyone gets the same tile order that day.
+Chain Placement is a strategic tile placement game played on a 5x5 board. Place each tile where it counts: a tile merges when the connected group of same-numbered tiles it joins (up, down, left, right, counting the placed tile) reaches 3 or more; the group collapses into the placed tile and it doubles, and chains repeat with the new number, multiplying your score. Tiles come from a shuffled bag of 10 (seven 2s, two 4s, one 8) with the next 3 tiles visible, so you always know what is left to come. The game ends when the board is full. It has two modes: Free Play with random bags, and Daily, where the bags are seeded by the date so everyone gets the same tile order that day.
 
 The game includes an optional "How to play" tutorial for anyone who wants the rules explained, plus placement and chain sounds with a mute toggle.
 
