@@ -176,14 +176,25 @@
         padding: 12px 14px;
         margin-bottom: 8px;
         box-shadow: var(--card-shadow);
+        /* Fixed height: inside this card, the "PLACE NEXT" label and the bag
+           composition text wrap or unwrap as the bag empties, and those wrap
+           changes used to resize the card and shift the board up and down.
+           A fixed card height (plus the fixed-height message line below)
+           means the board's on-screen position never moves. */
+        height: 112px;
+        overflow: hidden;
       }
       .queue .now-label, .queue .next-label {
         font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 5px;
+        white-space: nowrap;
       }
       .next-tiles { display: flex; gap: 6px; }
       .bag-info { margin-left: auto; text-align: right; }
       .bag-info .bag-count { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
-      .bag-info .bag-left { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; max-width: 150px; }
+      /* Reserve two lines: the bag composition text wraps to 2 lines at a
+         full bag and 1 line later, and that wrap change used to resize the
+         queue card and shift the board. Fixed reserve = board never moves. */
+      .bag-info .bag-left { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; max-width: 150px; line-height: 1.4; min-height: 34px; }
       .bag-info .bag-cap { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 5px; }
 
       .mini-tile {
@@ -196,7 +207,11 @@
       .mini-tile.dim { opacity: 0.88; }
 
       .turn-line {
-        min-height: 22px;
+        /* Fixed height (3 lines at this size) so the board and everything
+           around it never shift when the feedback message changes length. */
+        height: 59px;
+        overflow: hidden;
+        line-height: 1.45;
         text-align: center;
         font-size: 13.5px;
         color: var(--ink-soft);
@@ -274,8 +289,52 @@
         15% { opacity: 1; }
         100% { opacity: 0; margin-top: -38px; }
       }
+      /* Chain celebration: bigger gold floating score with a pop and glow */
+      .float-score.chain {
+        font-size: 40px;
+        color: #c8890a;
+        text-shadow: 0 0 16px rgba(232, 178, 62, 0.65), 0 0 4px rgba(232, 178, 62, 0.5), 0 1px 0 var(--bg);
+        animation: floatup-chain 1.15s ease-out forwards;
+      }
+      @media (prefers-color-scheme: dark) {
+        .float-score.chain { color: #f0bc45; }
+      }
+      @keyframes floatup-chain {
+        0% { opacity: 0; margin-top: 8px; transform: translate(-50%, -50%) scale(0.45); }
+        18% { opacity: 1; transform: translate(-50%, -50%) scale(1.28); }
+        38% { transform: translate(-50%, -50%) scale(1); }
+        100% { opacity: 0; margin-top: -52px; transform: translate(-50%, -50%) scale(1.04); }
+      }
+      /* Gold ring + glow pulse on the tile a chain lands on */
+      .cell.chain-celebrated { animation: chainglow 0.95s ease-out; z-index: 2; }
+      @keyframes chainglow {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232, 178, 62, 0), 0 0 0 0 rgba(232, 178, 62, 0); }
+        30% { transform: scale(1.13); box-shadow: 0 0 0 3px rgba(232, 178, 62, 0.95), 0 0 28px 8px rgba(232, 178, 62, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232, 178, 62, 0), 0 0 0 0 rgba(232, 178, 62, 0); }
+      }
+      /* Brief golden glow around the board edge on a chain */
+      .board.chain-flash { animation: boardglow 0.9s ease-out; }
+      @keyframes boardglow {
+        0%, 100% { box-shadow: var(--shadow), inset 0 1px 0 var(--board-hi); }
+        30% { box-shadow: 0 0 0 2px rgba(232, 178, 62, 0.8), 0 0 36px 6px rgba(232, 178, 62, 0.45), inset 0 1px 0 var(--board-hi); }
+      }
+      /* Small sparkle burst from the chain tile */
+      .sparkle {
+        position: absolute;
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: radial-gradient(circle, #ffedb0 0%, #eeb93e 65%, rgba(238, 185, 62, 0) 100%);
+        pointer-events: none;
+        z-index: 6;
+        animation: sparkle-fly 0.8s ease-out forwards;
+      }
+      @keyframes sparkle-fly {
+        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+        20% { opacity: 1; }
+        100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))) scale(1); }
+      }
       @media (prefers-reduced-motion: reduce) {
-        .cell.just-placed, .cell.merging, .cell.consumed, .float-score { animation: none; }
+        .cell.just-placed, .cell.merging, .cell.consumed, .float-score, .cell.chain-celebrated, .board.chain-flash, .sparkle { animation: none; }
       }
 
       /* Tile colors: muted, sophisticated ramp */
@@ -691,11 +750,68 @@
         osc.start(t);
         osc.stop(t + dur + 0.05);
       }
-      /* Soft, low "thock" when a tile lands. Quiet enough to hear dozens of times. */
+      /* A tone scheduled `delay` seconds from now (for arpeggios). */
+      function toneDelayed(ctx, freq, peak, dur, type, delay) {
+        var t = ctx.currentTime + (delay || 0);
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(peak, t + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + dur + 0.05);
+      }
+      /* Very short filtered noise burst: the "knock" at the attack of a
+         wooden tile hitting the board. */
+      function clickTransient(ctx, peak) {
+        var len = Math.max(1, Math.floor(ctx.sampleRate * 0.03));
+        var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        var data = buf.getChannelData(0);
+        for (var i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+        var src = ctx.createBufferSource();
+        src.buffer = buf;
+        var filter = ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.value = 1900;
+        filter.Q.value = 0.8;
+        var gain = ctx.createGain();
+        gain.gain.value = peak;
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        src.start();
+      }
+      /* Solid wooden "thock" when a tile lands: a low triangle body with real
+         weight, a sine harmonic an octave up for body, and a click transient
+         at the attack. Louder and more satisfying than the original soft tap,
+         still under a quarter of a second. */
       function playPlace() {
         var ctx = ensureAudio();
         if (!ctx) return;
-        try { tone(ctx, 215, 0.20, 0.11, "triangle", 140); } catch (e) {}
+        try {
+          tone(ctx, 200, 0.38, 0.15, "triangle", 115);
+          tone(ctx, 400, 0.15, 0.10, "sine", 250);
+          clickTransient(ctx, 0.22);
+        } catch (e) {}
+      }
+      /* Chain reward: one bright ascending arpeggio flourish per placement
+         that chains (2+ merge steps), played after the final merge lands.
+         Longer chains (3+) add a fifth, higher note. Under 0.7s total. */
+      function playChainReward(step) {
+        var ctx = ensureAudio();
+        if (!ctx) return;
+        try {
+          var notes = [523.25, 659.25, 783.99, 1046.5];
+          if (step >= 3) notes.push(1318.51);
+          for (var i = 0; i < notes.length; i++) {
+            toneDelayed(ctx, notes[i], 0.20, 0.38, "sine", i * 0.07);
+            toneDelayed(ctx, notes[i] * 2, 0.06, 0.26, "sine", i * 0.07);
+          }
+        } catch (e) {}
       }
       /* Brighter chime per merge; each chain step climbs a pentatonic ladder
          and gains a little presence. Ladder caps at the top rung. */
@@ -874,19 +990,42 @@
       }
       function renderAll(marks) { renderBoard(marks); renderQueue(); renderStats(); }
 
-      function floatScore(r, c, points) {
+      function floatScore(r, c, points, chained) {
         var cells = el.board.children;
         var cell = cells[r * BOARD_SIZE + c];
         if (!cell) return;
         var shellRect = el.shell.getBoundingClientRect();
         var rect = cell.getBoundingClientRect();
         var f = document.createElement("div");
-        f.className = "float-score";
+        f.className = "float-score" + (chained ? " chain" : "");
         f.textContent = "+" + fmt(points);
         f.style.left = (rect.left - shellRect.left + rect.width / 2) + "px";
         f.style.top = (rect.top - shellRect.top + rect.height / 2) + "px";
         el.shell.appendChild(f);
-        setTimeout(function () { f.remove(); }, 1100);
+        setTimeout(function () { f.remove(); }, chained ? 1250 : 1100);
+      }
+
+      /* Small gold sparkle burst radiating from the chain tile. */
+      function spawnSparkles(r, c) {
+        var cells = el.board.children;
+        var cell = cells[r * BOARD_SIZE + c];
+        if (!cell) return;
+        var shellRect = el.shell.getBoundingClientRect();
+        var rect = cell.getBoundingClientRect();
+        var cx = rect.left - shellRect.left + rect.width / 2;
+        var cy = rect.top - shellRect.top + rect.height / 2;
+        var dirs = [[0, -1], [0.7, -0.7], [1, 0], [0.7, 0.7], [0, 1], [-0.7, 0.7], [-1, 0], [-0.7, -0.7]];
+        for (var i = 0; i < dirs.length; i++) {
+          var s = document.createElement("div");
+          s.className = "sparkle";
+          var dist = rect.width * (0.8 + (i % 3) * 0.2);
+          s.style.left = cx + "px";
+          s.style.top = cy + "px";
+          s.style.setProperty("--dx", (dirs[i][0] * dist).toFixed(1) + "px");
+          s.style.setProperty("--dy", (dirs[i][1] * dist).toFixed(1) + "px");
+          el.shell.appendChild(s);
+          (function (node) { setTimeout(function () { node.remove(); }, 850); })(s);
+        }
       }
 
       /* ---------- Core turn logic: connected-group-of-3 completion, with chains ---------- */
@@ -934,8 +1073,8 @@
 
         topUpHand();
 
+        var chained = step >= 2 && total > 0;
         if (total > 0) {
-          floatScore(r, c, total);
           if (step >= 2) {
             var span = document.createElement("span");
             span.className = "chain";
@@ -958,7 +1097,20 @@
         }
 
         if (score > best[mode]) best[mode] = score;
-        renderAll();
+        var endMarks = {};
+        if (chained) endMarks[r + "," + c] = "chain-celebrated";
+        renderAll(endMarks);
+        if (total > 0) {
+          floatScore(r, c, total, chained);
+          if (chained) {
+            /* Reward moment: one flourish, gold score, glowing tile, sparkles,
+               and a brief golden glow on the board edge. */
+            playChainReward(step);
+            spawnSparkles(r, c);
+            el.board.classList.add("chain-flash");
+            setTimeout(function () { el.board.classList.remove("chain-flash"); }, 950);
+          }
+        }
         busy = false;
 
         if (boardFull()) endGame();
