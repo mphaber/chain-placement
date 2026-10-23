@@ -412,6 +412,34 @@
           background-image: linear-gradient(165deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 52%);
         }
       }
+      /* Unstable tiles (64 and up: the pair-merge tier) quiver constantly
+         and breathe with an electric-blue glow, so the special tiles read
+         as charged and barely contained. The jitter is transform-only, so
+         the board layout never shifts. The :not() guard steps aside while
+         a one-shot place / merge / consumed animation is running. */
+      .cell.unstable {
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 -3px 6px rgba(31, 24, 10, 0.12), 0 2px 8px rgba(31, 24, 10, 0.2), 0 0 14px rgba(96, 190, 255, 0.55), 0 0 0 1.5px rgba(150, 215, 255, 0.6);
+      }
+      .cell.unstable:not(.just-placed):not(.merging):not(.consumed) {
+        animation: quiver 0.3s linear infinite, unstable-glow 1.7s ease-in-out infinite;
+      }
+      @keyframes quiver {
+        0% { transform: translate(0, 0) rotate(0deg); }
+        25% { transform: translate(0.7px, -0.6px) rotate(0.5deg); }
+        50% { transform: translate(-0.7px, 0.5px) rotate(-0.5deg); }
+        75% { transform: translate(0.6px, 0.7px) rotate(0.35deg); }
+        100% { transform: translate(0, 0) rotate(0deg); }
+      }
+      @keyframes unstable-glow {
+        0%, 100% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 -3px 6px rgba(31, 24, 10, 0.12), 0 2px 8px rgba(31, 24, 10, 0.2), 0 0 10px rgba(96, 190, 255, 0.4), 0 0 0 1.5px rgba(150, 215, 255, 0.45); }
+        50% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -3px 6px rgba(31, 24, 10, 0.12), 0 2px 8px rgba(31, 24, 10, 0.2), 0 0 22px rgba(96, 190, 255, 0.75), 0 0 0 2px rgba(170, 225, 255, 0.75); }
+      }
+      /* Reduce Motion: no quiver, no pulsing; the static electric ring and
+         glow above still mark the tile as special. Same selector as the
+         animation rule so this wins on specificity and order. */
+      @media (prefers-reduced-motion: reduce) {
+        .cell.unstable:not(.just-placed):not(.merging):not(.consumed) { animation: none; }
+      }
       .cell .small-num { font-size: 0.72em; }
 
       /* Game over overlay */
@@ -834,7 +862,10 @@
             if (!AC) return null;
             audioCtx = new AC();
           }
-          if (audioCtx.state === "suspended") {
+          /* Resume whenever the context is not running: iOS also parks
+             contexts in "interrupted" (after a call, Siri, or a route
+             change), and that state never recovers on its own. */
+          if (audioCtx.state !== "running") {
             var p = audioCtx.resume();
             if (p && p.catch) p.catch(function () {});
           }
@@ -975,6 +1006,18 @@
         if (soundOn) playPlace();   // little confirmation tap, inside the gesture
       });
       renderSoundBtn();
+
+      /* Re-prime the context on any tap and when the page becomes visible
+         again, so an interruption mid-session recovers sound at the next
+         interaction instead of staying silent until a reload. Only touches
+         an existing context; creation still happens inside the play calls
+         above, always within a user gesture. */
+      document.addEventListener("pointerdown", function () {
+        if (audioCtx) ensureAudio();
+      });
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible" && audioCtx) ensureAudio();
+      });
 
       function tileClass(v) {
         if (v >= 4096) return "tbig";
@@ -1120,6 +1163,7 @@
               cell.setAttribute("role", "gridcell");
               if (v !== 0) {
                 cell.classList.add("filled", tileClass(v));
+                if (v >= PAIR_MERGE_MIN) cell.classList.add("unstable");
                 cell.textContent = v >= 1000 ? "" : String(v);
                 if (v >= 1000) {
                   var s = document.createElement("span");
