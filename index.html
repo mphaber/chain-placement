@@ -711,8 +711,58 @@
       var bagsStarted = 0;                // bags dealt this game; completing one (past the first) earns a shuffle charge
       var pendingShuffleNote = false;     // a charge was earned during this turn's draws: note it in the feedback line
       var score = 0, turns = 0, highest = 0;
-      var best = { free: 0, daily: 0 };   // best score per mode, this session
+      var best = { free: 0, daily: 0 };   // best score per mode, persisted (see below)
       var busy = false, over = false;
+
+      /* ---------- Best-score persistence ----------
+         One canonical record under a single fixed, version-independent key:
+         "chain-placement-best" holding {"free": N, "daily": N}. It is
+         written through the moment a Best improves, and flushed again on
+         pagehide / visibilitychange-hidden, so a new Best survives reloads,
+         tab closes mid-game, and republishing (same origin, same key, and
+         the key carries no build number or date). Best is never reset by
+         New game, Play again, mode switches, or shuffles. If localStorage
+         is unavailable (private mode etc.), Best silently lives in memory
+         for the session only, exactly as the sound preference already does. */
+      var BEST_KEY = "chain-placement-best";
+      /* Legacy per-mode keys an earlier build could have used; read once at
+         load so any score stored under them is adopted, never orphaned. */
+      var LEGACY_BEST_KEYS = { free: "chain-placement-best-free", daily: "chain-placement-best-daily" };
+      function readStoredBest() {
+        var found = { free: 0, daily: 0 };
+        try {
+          var raw = window.localStorage.getItem(BEST_KEY);
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            if (parsed) {
+              if (typeof parsed.free === "number" && isFinite(parsed.free)) found.free = Math.max(0, Math.floor(parsed.free));
+              if (typeof parsed.daily === "number" && isFinite(parsed.daily)) found.daily = Math.max(0, Math.floor(parsed.daily));
+            }
+          }
+          ["free", "daily"].forEach(function (m) {
+            var legacy = window.localStorage.getItem(LEGACY_BEST_KEYS[m]);
+            if (legacy !== null) {
+              var n = parseInt(legacy, 10);
+              if (isFinite(n) && n > found[m]) found[m] = n;
+            }
+          });
+        } catch (e) { /* storage unavailable: in-memory only */ }
+        return found;
+      }
+      function saveBest() {
+        try {
+          window.localStorage.setItem(BEST_KEY, JSON.stringify({ free: best.free, daily: best.daily }));
+        } catch (e) { /* storage unavailable: in-memory only */ }
+      }
+      function noteBest() {
+        if (score > best[mode]) { best[mode] = score; saveBest(); }
+      }
+      best = readStoredBest();
+      saveBest();   // writes the canonical record, including any adopted legacy scores
+      window.addEventListener("pagehide", saveBest);
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "hidden") saveBest();
+      });
 
       var el = {
         board: document.getElementById("board"),
@@ -1229,7 +1279,7 @@
           el.turnLine.appendChild(document.createTextNode(" +1 shuffle."));
         }
 
-        if (score > best[mode]) best[mode] = score;
+        noteBest();
         var endMarks = {};
         if (chained) endMarks[r + "," + c] = "chain-celebrated";
         renderAll(endMarks);
@@ -1272,7 +1322,7 @@
       }
       function endGame() {
         over = true;
-        if (score > best[mode]) best[mode] = score;
+        noteBest();
         renderStats();
         renderShuffleBtn();
         el.overMode.textContent = mode === "daily"
