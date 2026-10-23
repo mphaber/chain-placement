@@ -531,12 +531,12 @@
           </div>
           <div class="tut-step">
             <h3>2 · Merge</h3>
-            <p>A tile merges only when it lands touching <b>2 or more tiles of the same number</b>, up, down, left or right (diagonals do not count). The matching tiles collapse into it and it <b>doubles</b>. One matching neighbour is not enough: use those as bait for a trap.</p>
+            <p>A tile merges when it joins a <b>connected group of 3 or more</b> tiles of the same number, counting the tile you placed. Connections run up, down, left or right; diagonals do not count. Drop it between two singles to join them, or next to a pair to complete it. The whole group collapses into your tile and it <b>doubles</b>. A group of 1 or 2 just sits there: bait for a trap.</p>
             <div class="demo-row">
               <div class="demo-wrap">
                 <div class="demo" aria-hidden="true">
                   <i></i><i></i><i></i>
-                  <i class="t2">2</i><i class="t2 placed">2</i><i class="t2">2</i>
+                  <i class="t2">2</i><i class="t2">2</i><i class="t2 placed">2</i>
                   <i></i><i></i><i></i>
                 </div>
                 <div class="demo-cap">Before</div>
@@ -545,7 +545,7 @@
               <div class="demo-wrap">
                 <div class="demo" aria-hidden="true">
                   <i></i><i></i><i></i>
-                  <i></i><i class="t4">4</i><i></i>
+                  <i></i><i></i><i class="t4">4</i>
                   <i></i><i></i><i></i>
                 </div>
                 <div class="demo-cap">After</div>
@@ -554,7 +554,7 @@
           </div>
           <div class="tut-step">
             <h3>3 · Chain &amp; score</h3>
-            <p>If the new tile now touches 2+ of its new number, it merges again: a <b>chain</b>. Each merge scores the <b>tile created × its step</b> in the chain: 1st merge ×1, 2nd ×2, 3rd ×3.</p>
+            <p>If the new tile is now part of a connected group of 3+ of its new number, it merges again: a <b>chain</b>. Each merge scores the <b>tile created × its step</b> in the chain: 1st merge ×1, 2nd ×2, 3rd ×3.</p>
             <div class="score-example">2s make a <b>4</b> (4 pts) → that 4 makes an <b>8</b> (8 × 2 = 16 pts) → that 8 makes a <b>16</b> (16 × 3 = 48 pts). One tap: <b>68 points</b>.</div>
           </div>
           <p class="tut-end">The game ends when the board is full. In Daily, everyone gets the same tiles that day.</p>
@@ -755,8 +755,35 @@
         if (c < BOARD_SIZE - 1) out.push([r, c + 1]);
         return out;
       }
-      function matchingNeighbours(r, c, value) {
-        return neighbours(r, c).filter(function (p) { return board[p[0]][p[1]] === value; });
+      /* Orthogonally connected component of same-value tiles containing (r, c).
+         The cell (r, c) itself must hold `value` (set it temporarily to simulate
+         a hypothetical placement). Diagonals never connect. */
+      function componentAt(r, c, value) {
+        var seen = {};
+        seen[r + "," + c] = true;
+        var stack = [[r, c]];
+        var comp = [];
+        while (stack.length) {
+          var p = stack.pop();
+          comp.push(p);
+          var ns = neighbours(p[0], p[1]);
+          for (var i = 0; i < ns.length; i++) {
+            var q = ns[i];
+            var key = q[0] + "," + q[1];
+            if (!seen[key] && board[q[0]][q[1]] === value) {
+              seen[key] = true;
+              stack.push(q);
+            }
+          }
+        }
+        return comp;
+      }
+      /* Would placing `value` on the empty cell (r, c) make a component of 3+? */
+      function wouldMerge(r, c, value) {
+        board[r][c] = value;
+        var n = componentAt(r, c, value).length;
+        board[r][c] = 0;
+        return n >= 3;
       }
       function boardFull() {
         for (var r = 0; r < BOARD_SIZE; r++)
@@ -792,7 +819,7 @@
                 cell.disabled = true;
               } else {
                 cell.setAttribute("aria-label", "Empty cell, row " + (r + 1) + ", column " + (c + 1));
-                if (!over && current !== undefined && matchingNeighbours(r, c, current).length >= 2) {
+                if (!over && current !== undefined && wouldMerge(r, c, current)) {
                   cell.classList.add("will-merge");
                 }
                 cell.addEventListener("click", function () { place(r, c); });
@@ -847,7 +874,7 @@
         setTimeout(function () { f.remove(); }, 1100);
       }
 
-      /* ---------- Core turn logic: the sandwich rule, with chains ---------- */
+      /* ---------- Core turn logic: connected-group-of-3 completion, with chains ---------- */
       function sleep(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
 
       async function place(r, c) {
@@ -867,8 +894,9 @@
 
         var total = 0, step = 0;
         while (true) {
-          var matches = matchingNeighbours(r, c, board[r][c]);
-          if (matches.length < 2) break;
+          var comp = componentAt(r, c, board[r][c]);
+          if (comp.length < 3) break;
+          var matches = comp.filter(function (p) { return !(p[0] === r && p[1] === c); });
           step++;
           var cmarks = {};
           matches.forEach(function (p) { cmarks[p[0] + "," + p[1]] = "consumed"; });
@@ -911,7 +939,7 @@
             el.turnLine.appendChild(document.createTextNode(" — merged into a " + fmt(board[r][c]) + "."));
           }
         } else {
-          el.turnLine.textContent = "No merge — the " + value + " sits there as bait. Build a second match beside it.";
+          el.turnLine.textContent = "No merge — a group needs 3 connected tiles of the same number. The " + value + " sits there as bait; complete its group to spring it.";
         }
 
         if (score > best[mode]) best[mode] = score;
