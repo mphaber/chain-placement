@@ -838,25 +838,26 @@
       var audioCtx = null;
       var masterGain = null;   // master output bus every voice routes through (see ensureAudio)
 
-      /* Declare the page's web audio session as "ambient" so our short sounds
-         mix with other apps' audio (e.g. a podcast) instead of interrupting it.
+      /* Declare the page's web audio session as "playback" so our sounds
+         play through the iPhone speaker even when the silent switch is on.
          Supported in Safari on iOS 17+ via navigator.audioSession; everywhere
          else this is a silent no-op. Guarded so it can never throw. Tradeoff:
-         ambient audio respects the phone's silent switch. */
-      function declareAmbientAudioSession() {
+         playback audio takes audio focus, so another app's audio (e.g. a
+         podcast) may pause while the game sounds. */
+      function declarePlaybackAudioSession() {
         try {
           if ("audioSession" in navigator) {
-            navigator.audioSession.type = "ambient";
+            navigator.audioSession.type = "playback";
           }
         } catch (e) { /* unsupported or refused: behave exactly as before */ }
       }
-      declareAmbientAudioSession();
+      declarePlaybackAudioSession();
 
       /* Create/resume the context. Called from user-gesture handlers (tile tap,
          toggle tap) so iOS Safari permits playback. Never throws. */
       function ensureAudio() {
         if (!soundOn) return null;
-        declareAmbientAudioSession();
+        declarePlaybackAudioSession();
         try {
           if (!audioCtx) {
             var AC = window.AudioContext || window.webkitAudioContext;
