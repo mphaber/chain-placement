@@ -554,6 +554,66 @@
       .score-example { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font-size: 13.5px; line-height: 1.6; color: var(--ink-soft); margin-top: 10px; }
       .tut-end { font-size: 13.5px; line-height: 1.55; color: var(--ink-soft); margin: 15px 0 0; }
       .tut-close { width: 100%; margin-top: 16px; }
+      .tut-walk { width: 100%; margin-top: 16px; }
+      .tut-walk + .tut-close { margin-top: 8px; }
+      .help-sep { color: var(--ink-soft); }
+
+      /* Guided walkthrough: coach card docked under the board. Fixed height,
+         so the board and everything above it never move as the coach text
+         changes length from step to step. */
+      .coach {
+        display: none;
+        flex-direction: column;
+        height: 248px;
+        margin-top: 14px;
+        padding: 14px 16px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--card-shadow);
+      }
+      .coach.open { display: flex; }
+      .coach-head { display: flex; align-items: flex-start; gap: 10px; }
+      .coach-title { font-family: Georgia, "Iowan Old Style", serif; font-size: 19px; font-weight: 600; line-height: 1.25; }
+      .coach-x {
+        margin-left: auto; flex: none;
+        width: 32px; height: 32px; border-radius: 999px;
+        border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+        font: inherit; font-size: 16px; line-height: 1; cursor: pointer;
+      }
+      .coach-text { font-size: 14.5px; line-height: 1.55; color: var(--ink-soft); margin: 8px 0 0; flex: 1; overflow: hidden; }
+      .coach-foot { display: flex; align-items: center; gap: 10px; margin-top: 10px; min-height: 40px; }
+      .coach-progress { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+      .coach-dots { display: inline-flex; gap: 4px; }
+      .cdot { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+      .cdot.on { background: var(--merge-ring); }
+      .coach-actions { margin-left: auto; display: flex; gap: 8px; }
+      .coach-btn { flex: none; padding: 9px 13px; font-size: 13.5px; }
+      .coach.nudge { animation: coachnudge 0.45s ease; }
+      @keyframes coachnudge {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-5px); }
+        45% { transform: translateX(5px); }
+        70% { transform: translateX(-3px); }
+        88% { transform: translateX(2px); }
+      }
+      /* Pulsing bronze ring on the walkthrough's target cell (same bronze as
+         the merge ring, so it reads as part of the game's own language). */
+      .cell.tut-target { animation: tutpulse 1.15s ease-in-out infinite; z-index: 2; }
+      .cell.tut-target-hard { animation: tutpulsehard 0.45s ease-in-out 2; }
+      @keyframes tutpulse {
+        0%, 100% { box-shadow: 0 0 0 2px var(--surface), 0 0 0 5px var(--merge-ring), 0 0 10px rgba(180, 118, 42, 0.35); }
+        50% { box-shadow: 0 0 0 2px var(--surface), 0 0 0 7px var(--merge-ring), 0 0 22px rgba(180, 118, 42, 0.65); }
+      }
+      @keyframes tutpulsehard {
+        0%, 100% { box-shadow: 0 0 0 2px var(--surface), 0 0 0 5px var(--merge-ring), 0 0 10px rgba(180, 118, 42, 0.35); }
+        50% { box-shadow: 0 0 0 3px var(--surface), 0 0 0 10px var(--merge-ring), 0 0 30px rgba(180, 118, 42, 0.85); }
+      }
+      .queue.tut-highlight, .shuffle-btn.tut-highlight { animation: tutpulse 1.15s ease-in-out infinite; }
+      @media (prefers-reduced-motion: reduce) {
+        .cell.tut-target, .queue.tut-highlight, .shuffle-btn.tut-highlight { animation: none; box-shadow: 0 0 0 2px var(--surface), 0 0 0 5px var(--merge-ring); }
+        .coach.nudge, .cell.tut-target-hard { animation: none; }
+      }
       footer.note { text-align: center; color: var(--ink-soft); font-size: 12px; margin-top: 16px; }
       footer.credit { text-align: center; color: var(--ink-soft); font-size: 12px; line-height: 1.6; margin-top: 20px; }
       footer.credit p { margin: 0; }
@@ -641,14 +701,28 @@
         </div>
       </div>
 
+      <div class="coach" id="coachCard">
+        <div class="coach-head">
+          <div class="coach-title" id="coachTitle"></div>
+          <button class="coach-x" id="coachExit" type="button" aria-label="Exit walkthrough">×</button>
+        </div>
+        <p class="coach-text" id="coachText"></p>
+        <div class="coach-foot">
+          <div class="coach-progress"><span id="coachStep"></span><span class="coach-dots" id="coachDots"></span></div>
+          <div class="coach-actions" id="coachActions"></div>
+        </div>
+      </div>
+
       <div class="first-hint" id="firstHint">
-        <span>New here? The rules take about 30 seconds.</span>
+        <span>New here? The rules take about 30 seconds, or take the guided walkthrough.</span>
         <button type="button" class="hint-open" id="hintOpen">How to play</button>
         <button type="button" class="hint-dismiss" id="hintDismiss" aria-label="Dismiss hint">×</button>
       </div>
 
       <div class="help-row">
         <button type="button" class="help-link" id="helpLink">How to play</button>
+        <span class="help-sep" aria-hidden="true">·</span>
+        <button type="button" class="help-link" id="walkLink">Walk me through it</button>
       </div>
 
       <div class="tut-overlay" id="tutOverlay">
@@ -688,6 +762,7 @@
             <div class="score-example">2s make a <b>4</b> (4 pts) → that 4 makes an <b>8</b> (8 × 2 = 16 pts) → that 8 makes a <b>16</b> (16 × 3 = 48 pts). One tap: <b>68 points</b>.</div>
           </div>
           <p class="tut-end">The game ends when the board is full. In Daily, everyone gets the same tiles that day.</p>
+          <button class="btn tut-walk" id="tutWalkBtn" type="button">Walk me through it</button>
           <button class="btn primary tut-close" id="tutClose" type="button">Got it</button>
         </div>
       </div>
@@ -793,6 +868,9 @@
         } catch (e) { /* storage unavailable: in-memory only */ }
       }
       function noteBest() {
+        /* Walkthrough play is practice on a scripted board: it must never
+           move a Best score or write one to storage. */
+        if (typeof walk !== "undefined" && walk) return;
         if (score > best[mode]) { best[mode] = score; saveBest(); }
       }
       best = readStoredBest();
@@ -825,6 +903,14 @@
         dailySub: document.getElementById("dailySub"),
         shuffleBtn: document.getElementById("shuffleBtn"),
         shuffleCount: document.getElementById("shuffleCount"),
+        queueCard: document.querySelector(".queue"),
+        coach: document.getElementById("coachCard"),
+        coachTitle: document.getElementById("coachTitle"),
+        coachText: document.getElementById("coachText"),
+        coachStep: document.getElementById("coachStep"),
+        coachDots: document.getElementById("coachDots"),
+        coachActions: document.getElementById("coachActions"),
+        coachExit: document.getElementById("coachExit"),
         shell: document.querySelector(".board-shell")
       };
       el.dailySub.textContent = "Daily · " + dailyDate;
@@ -1095,6 +1181,9 @@
          play histories. The multiset of undealt tiles never changes; the
          board, score, and turns are untouched, and it costs no turn. */
       function doShuffle() {
+        /* In the walkthrough the shuffle only works on its own step. */
+        if (typeof walk !== "undefined" && walk &&
+            !(walk.phase === "act" && WALK_STEPS[walk.step - 1].type === "shuffle")) return;
         if (busy || over || shuffleCharges <= 0) return;
         var entries = [];
         var i, e;
@@ -1114,6 +1203,7 @@
         el.turnLine.textContent = "Bag shuffled: the undealt tiles are in a new order. " +
           shuffleCharges + (shuffleCharges === 1 ? " shuffle" : " shuffles") + " left.";
         renderAll();
+        if (typeof walk !== "undefined" && walk) walkShuffleDone();
       }
 
       /* ---------- Board helpers ---------- */
@@ -1200,10 +1290,13 @@
                 if (!over && current !== undefined && wouldMerge(r, c, current)) {
                   cell.classList.add("will-merge");
                 }
-                cell.addEventListener("click", function () { place(r, c); });
+                cell.addEventListener("click", function () { handleCellTap(r, c); });
               }
               var key = r + "," + c;
               if (marks[key]) cell.classList.add(marks[key]);
+              if (typeof walk !== "undefined" && walk && walk.cellHL && walk.cellHL[0] === r && walk.cellHL[1] === c) {
+                cell.classList.add("tut-target");
+              }
               el.board.appendChild(cell);
             })(r, c);
           }
@@ -1374,10 +1467,12 @@
         renderShuffleBtn();
 
         if (boardFull()) endGame();
+        if (typeof walk !== "undefined" && walk) walkPlaceDone();
       }
 
       /* ---------- Game lifecycle ---------- */
       function startGame() {
+        if (typeof walk !== "undefined" && walk) return;   // never reset a real game out from under the walkthrough
         dailyDate = localDateString(new Date());
         el.dailySub.textContent = "Daily · " + dailyDate;
         rng = mode === "daily" ? mulberry32(hashString("chain-placement:" + dailyDate)) : Math.random;
@@ -1417,6 +1512,7 @@
 
       /* ---------- Controls ---------- */
       function setMode(next) {
+        if (typeof walk !== "undefined" && walk) return;
         if (mode === next) return;
         mode = next;
         el.tabFree.setAttribute("aria-selected", mode === "free" ? "true" : "false");
@@ -1475,7 +1571,9 @@
       document.getElementById("tutX").addEventListener("click", closeTut);
       tutOverlay.addEventListener("click", function (e) { if (e.target === tutOverlay) closeTut(); });
       document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape" && tutOverlay.classList.contains("open")) closeTut();
+        if (e.key !== "Escape") return;
+        if (tutOverlay.classList.contains("open")) closeTut();
+        else if (typeof walk !== "undefined" && walk) exitWalkthrough();
       });
       document.getElementById("hintDismiss").addEventListener("click", function () {
         markTutSeen();
@@ -1484,6 +1582,242 @@
       var tutSeen = false;
       try { tutSeen = window.localStorage.getItem(TUT_KEY) === "1"; } catch (e) { tutSeen = false; }
       if (!tutSeen) firstHint.classList.add("show");
+
+      /* ---------- Guided walkthrough ----------
+         An eight-step, scripted tour played on the real board through the
+         real engine (place, merges, chains, scoring, shuffle, sounds), so
+         what is practiced here is exactly the real game. Entering snapshots
+         the player's game (board, score, turns, bag and queue, shuffle
+         charges, mode, feedback line, even the Daily RNG stream, which is
+         kept as an uncalled closure reference) and leaving restores it
+         exactly, from any step. Tile supply is scripted, not the random
+         bag: the draw order is 2,2,2,2,4,2,8,4,2,2,2,8, whose first bag
+         counts out to a real bag's contents (seven 2s, two 4s, one 8).
+         The scripted board starts with two 4s at (1,3) and (1,4), so the
+         step-4 placement chains: 2s merge to a 4 (4 x 1), then the three
+         connected 4s merge to an 8 (8 x 2), 20 points for the one tap.
+         Best scores are never touched: noteBest() stands down while the
+         walkthrough runs, and no storage key is written by the tour. */
+      var walk = null;   // { step, phase: "read" | "act" | "done", target, cellHL, snapshot }
+
+      function walkSetup64() {
+        /* Step 6 setup: put the tile in hand back on top of the pool, deal
+           the practice 64 in its place, and set a lone 64 buzzing on the
+           bottom row with its target cell directly beside it. */
+        pool.unshift(hand[0]);
+        poolBags.unshift(handBag[0]);
+        hand[0] = 64;
+        board[4][1] = 64;
+      }
+      var WALK_STEPS = [
+        {
+          type: "info", hl: "queue", title: "Meet the board",
+          text: "Tiles come from the bag at the top of the screen, and you can always see the next three in line. You place one tile per turn, and the game ends when the board fills up. Two 4s are already sitting on this board: in a few steps, you will put them to work."
+        },
+        {
+          type: "place", target: [2, 1], title: "Place your first tile",
+          text: "Your first tile is a 2, shown in the Place Next spot at the top. Tap the glowing cell in the middle row, just left of center.",
+          after: "Placed, with the usual thock. Nothing else happened, and that is exactly right: a single tile on its own is just a tile, waiting for company."
+        },
+        {
+          type: "place", target: [2, 2], title: "Two is company",
+          text: "Another 2. Tap the glowing cell directly beside the one you just placed.",
+          after: "Still no merge. Two touching tiles of the same number do nothing yet, but they are far from wasted: they are bait, and bait is how you set a trap."
+        },
+        {
+          type: "place", target: [2, 3], title: "Three makes it merge",
+          text: "A third 2. Before you tap, look at the dashed ring on the glowing cell: the game shows you a merge before you commit to it. Now tap the cell.",
+          after: "The three 2s merged into a single 4. Three or more touching tiles of the same number always merge into the next number up, and touching means up, down, left or right, never diagonal."
+        },
+        {
+          type: "info", cellHL: [2, 3], title: "That was a chain!",
+          text: "Your new 4 landed right beside the two 4s already on the board, so it merged again, into the 8 that is glowing now. Chain steps multiply the points: the first merge scored 4, the second scored 8 times 2, so one tap earned 20 points. Setting traps and springing chains is the heart of this game."
+        },
+        {
+          type: "place", target: [4, 2], title: "Big tiles are unstable", onEnter: walkSetup64,
+          text: "This step deals you a practice tile, a 64: real bags only hold 2s, 4s and 8s, so a 64 is normally built by merging. A lone 64 is already buzzing in the bottom row. Tap the glowing cell directly beside it.",
+          after: "The pair merged into a 128, worth 128 points. Tiles of 64 and up are unstable, so they only need a partner of the same number instead of a group of three. When you see a tile buzzing, pair it."
+        },
+        {
+          type: "shuffle", title: "Stuck with the wrong tile? Shuffle",
+          onEnter: function () { shuffleCharges = 1; },
+          text: "Sometimes the tile you are holding is the wrong one. The Shuffle button stirs every undealt tile in the bag into a new order. You start each game with 1 shuffle, earn one more every time you finish a bag of 10, and can hold at most 2. Tap the Shuffle button now, while it is glowing.",
+          after: "Shuffled, and the riffle you heard was the bag being restacked. It cost one shuffle charge and no turn, and the tiles themselves never change: only their order does."
+        },
+        {
+          type: "final", title: "You're ready",
+          text: "Three things to remember: link three matching tiles to merge them; park pairs as bait so one good tile can spring a chain; and pair up buzzing tiles of 64 or more. Free Play is endless practice with fresh bags, while Daily deals everyone the same tiles for that day. Everything else, you will pick up by playing."
+        }
+      ];
+
+      function snapshotGame() {
+        return {
+          mode: mode, dailyDate: dailyDate, rng: rng,
+          board: board.map(function (row) { return row.slice(); }),
+          hand: hand.slice(), handBag: handBag.slice(),
+          pool: pool.slice(), poolBags: poolBags.slice(), poolBag: poolBag,
+          nextBagId: nextBagId, shuffleCharges: shuffleCharges, bagsStarted: bagsStarted,
+          pendingShuffleNote: pendingShuffleNote,
+          score: score, turns: turns, highest: highest, over: over,
+          turnHTML: el.turnLine.innerHTML,
+          overOpen: el.overlay.classList.contains("open"),
+          copyStatus: el.copyStatus.textContent,
+          shareValue: el.shareText.value,
+          shareShow: el.shareText.classList.contains("show")
+        };
+      }
+      function restoreGame(s) {
+        mode = s.mode; dailyDate = s.dailyDate; rng = s.rng;
+        board = s.board.map(function (row) { return row.slice(); });
+        hand = s.hand.slice(); handBag = s.handBag.slice();
+        pool = s.pool.slice(); poolBags = s.poolBags.slice(); poolBag = s.poolBag;
+        nextBagId = s.nextBagId; shuffleCharges = s.shuffleCharges; bagsStarted = s.bagsStarted;
+        pendingShuffleNote = s.pendingShuffleNote;
+        score = s.score; turns = s.turns; highest = s.highest; over = s.over; busy = false;
+        el.turnLine.innerHTML = s.turnHTML;
+        el.overlay.classList.toggle("open", s.overOpen);
+        el.copyStatus.textContent = s.copyStatus;
+        el.shareText.value = s.shareValue;
+        el.shareText.classList.toggle("show", s.shareShow);
+        el.dailySub.textContent = "Daily · " + dailyDate;
+        el.tabFree.setAttribute("aria-selected", mode === "free" ? "true" : "false");
+        el.tabDaily.setAttribute("aria-selected", mode === "daily" ? "true" : "false");
+        renderAll();
+      }
+      function setupWalkState() {
+        rng = mulberry32(1);   // the tour's own stream (only the guided shuffle draws from it)
+        board = [];
+        for (var r = 0; r < BOARD_SIZE; r++) board.push(new Array(BOARD_SIZE).fill(0));
+        board[1][3] = 4; board[1][4] = 4;
+        hand = [2, 2, 2, 2]; handBag = [0, 0, 0, 0];
+        pool = [4, 2, 8, 4, 2, 2, 2, 8]; poolBags = [0, 0, 0, 0, 0, 0, 1, 1];
+        poolBag = 1; nextBagId = 2; bagsStarted = 2;
+        shuffleCharges = 0; pendingShuffleNote = false;
+        score = 0; turns = 0; highest = 4; over = false; busy = false;
+        el.overlay.classList.remove("open");
+        el.turnLine.textContent = "Walkthrough: follow the coach card below the board.";
+      }
+      function startWalkthrough() {
+        if (walk || busy) return;
+        walk = { step: 0, phase: "read", target: null, cellHL: null, snapshot: snapshotGame() };
+        setupWalkState();
+        el.coach.classList.add("open");
+        walkShowStep(1);
+      }
+      function exitWalkthrough() {
+        if (!walk || busy) return;
+        var snap = walk.snapshot;
+        walk = null;
+        el.coach.classList.remove("open");
+        applyWalkHighlights();
+        restoreGame(snap);
+      }
+      function walkRestart() {
+        if (!walk) return;
+        setupWalkState();
+        walkShowStep(1);
+      }
+      function walkPlayFree() {
+        exitWalkthrough();
+        if (walk) return;   // exit was deferred (mid-animation): do not start over the tour
+        if (mode === "free") startGame(); else setMode("free");
+      }
+      function walkShowStep(n) {
+        walk.step = n;
+        var def = WALK_STEPS[n - 1];
+        walk.phase = (def.type === "place" || def.type === "shuffle") ? "act" : "read";
+        walk.target = def.target || null;
+        walk.cellHL = def.cellHL || def.target || null;
+        if (def.onEnter) def.onEnter();
+        renderWalkCoach(def, def.text);
+        applyWalkHighlights();
+        renderAll();
+      }
+      function walkAdvance() {
+        if (walk && walk.step < WALK_STEPS.length) walkShowStep(walk.step + 1);
+      }
+      function addCoachBtn(label, primary, fn) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn coach-btn" + (primary ? " primary" : "");
+        b.textContent = label;
+        b.addEventListener("click", fn);
+        el.coachActions.appendChild(b);
+      }
+      function renderWalkCoach(def, text) {
+        el.coachTitle.textContent = def.title;
+        el.coachText.textContent = text;
+        el.coachStep.textContent = "Step " + walk.step + " of " + WALK_STEPS.length;
+        el.coachDots.innerHTML = "";
+        for (var i = 1; i <= WALK_STEPS.length; i++) {
+          var d = document.createElement("span");
+          d.className = "cdot" + (i <= walk.step ? " on" : "");
+          el.coachDots.appendChild(d);
+        }
+        el.coachActions.innerHTML = "";
+        if (walk.phase === "read" && def.type === "final") {
+          addCoachBtn("Play Free Play", true, walkPlayFree);
+          addCoachBtn("Watch it again", false, walkRestart);
+          addCoachBtn("Done", false, exitWalkthrough);
+        } else if (walk.phase === "read" || walk.phase === "done") {
+          addCoachBtn("Next", true, walkAdvance);
+        }
+      }
+      function applyWalkHighlights() {
+        var def = walk ? WALK_STEPS[walk.step - 1] : null;
+        el.queueCard.classList.toggle("tut-highlight", !!(def && def.hl === "queue"));
+        el.shuffleBtn.classList.toggle("tut-highlight",
+          !!(def && def.type === "shuffle" && walk.phase === "act"));
+      }
+      function walkNudge() {
+        el.coach.classList.remove("nudge");
+        void el.coach.offsetWidth;
+        el.coach.classList.add("nudge");
+        if (walk.target) {
+          var cell = el.board.children[walk.target[0] * BOARD_SIZE + walk.target[1]];
+          if (cell) {
+            cell.classList.remove("tut-target-hard");
+            void cell.offsetWidth;
+            cell.classList.add("tut-target-hard");
+          }
+        }
+      }
+      /* Board taps route here first: in the walkthrough, only the target
+         cell of an action step places a tile; any other tap is a nudge. */
+      function handleCellTap(r, c) {
+        if (walk) {
+          if (walk.phase !== "act" || busy) return;
+          var def = WALK_STEPS[walk.step - 1];
+          if (def.type !== "place") return;
+          if (def.target && def.target[0] === r && def.target[1] === c) place(r, c);
+          else walkNudge();
+          return;
+        }
+        place(r, c);
+      }
+      function walkPlaceDone() {
+        if (!walk || walk.phase !== "act") return;
+        var def = WALK_STEPS[walk.step - 1];
+        if (def.type !== "place") return;
+        walk.phase = "done";
+        walk.cellHL = null;
+        renderWalkCoach(def, def.after);
+        renderAll();
+      }
+      function walkShuffleDone() {
+        if (!walk || walk.phase !== "act") return;
+        var def = WALK_STEPS[walk.step - 1];
+        if (def.type !== "shuffle") return;
+        walk.phase = "done";
+        applyWalkHighlights();
+        renderWalkCoach(def, def.after);
+      }
+      el.coachExit.addEventListener("click", exitWalkthrough);
+      document.getElementById("walkLink").addEventListener("click", startWalkthrough);
+      document.getElementById("tutWalkBtn").addEventListener("click", function () {
+        closeTut();
+        startWalkthrough();
+      });
 
       startGame();
     </script>
