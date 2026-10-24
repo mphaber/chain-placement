@@ -836,6 +836,7 @@
         if (window.localStorage.getItem(SOUND_KEY) === "off") soundOn = false;
       } catch (e) { /* storage unavailable: default to on, in-memory only */ }
       var audioCtx = null;
+      var masterGain = null;   // master output bus every voice routes through (see ensureAudio)
 
       /* Declare the page's web audio session as "ambient" so our short sounds
          mix with other apps' audio (e.g. a podcast) instead of interrupting it.
@@ -861,6 +862,26 @@
             var AC = window.AudioContext || window.webkitAudioContext;
             if (!AC) return null;
             audioCtx = new AC();
+            /* Master output bus: all voices connect to masterGain, which
+               feeds a compressor wired to the destination. The compressor
+               is only a safety ceiling for overlapping sounds (threshold
+               -3 dB, ratio 12); a single sound below it passes essentially
+               unchanged. If DynamicsCompressor is unavailable, the master
+               gain connects straight to the destination. */
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 1.0;
+            if (typeof audioCtx.createDynamicsCompressor === "function") {
+              var comp = audioCtx.createDynamicsCompressor();
+              comp.threshold.value = -3;
+              comp.knee.value = 6;
+              comp.ratio.value = 12;
+              comp.attack.value = 0.001;
+              comp.release.value = 0.24;
+              masterGain.connect(comp);
+              comp.connect(audioCtx.destination);
+            } else {
+              masterGain.connect(audioCtx.destination);
+            }
           }
           /* Resume whenever the context is not running: iOS also parks
              contexts in "interrupted" (after a call, Siri, or a route
@@ -883,7 +904,7 @@
         gain.gain.exponentialRampToValueAtTime(peak, t + 0.01);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(masterGain || ctx.destination);
         osc.start(t);
         osc.stop(t + dur + 0.05);
       }
@@ -898,7 +919,7 @@
         gain.gain.exponentialRampToValueAtTime(peak, t + 0.012);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(masterGain || ctx.destination);
         osc.start(t);
         osc.stop(t + dur + 0.05);
       }
@@ -919,7 +940,7 @@
         gain.gain.value = peak;
         src.connect(filter);
         filter.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(masterGain || ctx.destination);
         src.start();
       }
       /* Solid wooden "thock" when a tile lands: a low triangle body with real
@@ -930,9 +951,9 @@
         var ctx = ensureAudio();
         if (!ctx) return;
         try {
-          tone(ctx, 200, 0.38, 0.15, "triangle", 115);
-          tone(ctx, 400, 0.15, 0.10, "sine", 250);
-          clickTransient(ctx, 0.22);
+          tone(ctx, 200, 0.80, 0.15, "triangle", 115);
+          tone(ctx, 400, 0.30, 0.10, "sine", 250);
+          clickTransient(ctx, 0.40);
         } catch (e) {}
       }
       /* Shuffle sound: a soft three-burst riffle of filtered noise, like
@@ -953,16 +974,16 @@
         gain.gain.value = peak;
         src.connect(filter);
         filter.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(masterGain || ctx.destination);
         src.start(t);
       }
       function playShuffle() {
         var ctx = ensureAudio();
         if (!ctx) return;
         try {
-          noiseBurst(ctx, 0.13, 0, 1100);
-          noiseBurst(ctx, 0.17, 0.07, 1650);
-          noiseBurst(ctx, 0.11, 0.14, 1300);
+          noiseBurst(ctx, 0.30, 0, 1100);
+          noiseBurst(ctx, 0.40, 0.07, 1650);
+          noiseBurst(ctx, 0.26, 0.14, 1300);
         } catch (e) {}
       }
       /* Chain reward: one bright ascending arpeggio flourish per placement
@@ -975,8 +996,8 @@
           var notes = [523.25, 659.25, 783.99, 1046.5];
           if (step >= 3) notes.push(1318.51);
           for (var i = 0; i < notes.length; i++) {
-            toneDelayed(ctx, notes[i], 0.20, 0.38, "sine", i * 0.07);
-            toneDelayed(ctx, notes[i] * 2, 0.06, 0.26, "sine", i * 0.07);
+            toneDelayed(ctx, notes[i], 0.60, 0.38, "sine", i * 0.07);
+            toneDelayed(ctx, notes[i] * 2, 0.16, 0.26, "sine", i * 0.07);
           }
         } catch (e) {}
       }
@@ -988,7 +1009,7 @@
         if (!ctx) return;
         try {
           var freq = CHAIN_FREQS[Math.min(step - 1, CHAIN_FREQS.length - 1)];
-          var peak = Math.min(0.20 + step * 0.03, 0.34);
+          var peak = Math.min(0.46 + step * 0.04, 0.58);
           tone(ctx, freq, peak, 0.30, "sine");
           tone(ctx, freq * 2, peak * 0.32, 0.18, "sine");
         } catch (e) {}
