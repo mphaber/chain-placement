@@ -1,0 +1,13 @@
+{
+  "name": "Thrink",
+  "short_name": "Thrink",
+  "description": "A tile-merging puzzle game. Place tiles from the bag, link three of a kind to merge them, and spring chains for big scores.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#f4f1ea",
+  "theme_color": "#f4f1ea",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
