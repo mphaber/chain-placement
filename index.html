@@ -64,10 +64,17 @@
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; }
+      html { background: var(--board-deep); }
+      body.at-entrance { overflow: hidden; }
       body {
+        /* The game view lives in the same tray world as the entrance: a deep
+           tray tone with a very subtle recessed-cell field under everything. */
         background:
+          linear-gradient(color-mix(in srgb, var(--cell-edge) 42%, transparent) 1px, transparent 1px),
+          linear-gradient(90deg, color-mix(in srgb, var(--cell-edge) 42%, transparent) 1px, transparent 1px),
           radial-gradient(1100px 520px at 50% -8%, var(--page-glow), rgba(0, 0, 0, 0) 62%),
-          linear-gradient(180deg, var(--bg) 0%, var(--page-deep) 135%);
+          linear-gradient(180deg, var(--surface-2) 0%, var(--board-deep) 135%);
+        background-size: 76px 76px, 76px 76px, auto, auto;
         color: var(--ink);
         font-family: ui-sans-system, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         -webkit-font-smoothing: antialiased;
@@ -80,7 +87,7 @@
       }
       header.top {
         display: flex;
-        align-items: baseline;
+        align-items: center;
         justify-content: space-between;
         gap: 12px;
         margin-bottom: 14px;
@@ -104,18 +111,21 @@
         gap: 10px;
       }
       .logo-mark { width: 44px; height: 44px; flex: none; display: block; }
+      /* Header chrome sits quietly on the tray ground: no bordered pills,
+         just icon/text controls that warm up on hover. */
       .new-btn {
         flex: none;
-        border: 1px solid var(--line);
-        background: var(--surface);
-        color: var(--ink);
+        border: 0;
+        background: transparent;
+        color: var(--ink-soft);
         font: inherit;
         font-size: 13px;
         font-weight: 600;
-        padding: 8px 14px;
-        border-radius: 999px;
+        padding: 8px 9px;
+        border-radius: 10px;
         cursor: pointer;
       }
+      .new-btn:hover { color: var(--ink); }
       .new-btn:active { transform: scale(0.97); }
       .top-actions { display: flex; gap: 8px; flex: none; align-items: center; }
       .sound-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; }
@@ -137,80 +147,85 @@
         .help-btn .q { margin-right: 0; }
       }
 
-      /* Mode tabs */
+      /* Mode switch: two mini tile tabs in the entrance's language (sage
+         Free Play, gold Daily carrying its date), not a web pill. The
+         selected tile gets the bronze ring; the other rests dimmed. */
       .tabs {
         display: flex;
-        background: var(--surface-2);
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        padding: 4px;
-        gap: 4px;
+        gap: 8px;
         margin-bottom: 16px;
       }
       .tab {
         flex: 1;
-        border: 0;
-        background: transparent;
-        color: var(--ink-soft);
+        border: 1px solid rgba(0, 0, 0, 0.10);
         font: inherit;
-        font-size: 14px;
-        font-weight: 600;
-        padding: 9px 6px;
-        border-radius: 999px;
+        font-size: 16px;
+        font-weight: 700;
+        padding: 11px 14px;
+        border-radius: 14px;
         cursor: pointer;
+        text-align: left;
+        background-image: linear-gradient(165deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 52%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 6px rgba(31, 24, 10, 0.12), 0 2px 5px rgba(31, 24, 10, 0.18);
+        opacity: 0.78;
+      }
+      .tab:active { transform: scale(0.98); }
+      #tabFree { background-color: #cfd8c3; color: #2f3d27; }
+      #tabDaily { background-color: #eeb93e; color: #473311; }
+      @media (prefers-color-scheme: dark) {
+        #tabFree { background-color: #5b6a50; color: #eef3e4; }
       }
       .tab[aria-selected="true"] {
-        background: var(--surface);
-        color: var(--ink);
-        box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+        opacity: 1;
+        box-shadow: 0 0 0 2.5px var(--merge-ring), inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 6px rgba(31, 24, 10, 0.12), 0 3px 8px rgba(31, 24, 10, 0.22);
       }
-      .tab .sub { display: block; font-size: 11px; font-weight: 500; color: var(--ink-soft); margin-top: 1px; }
+      .tab .sub { display: block; font-size: 11px; font-weight: 600; opacity: 0.72; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
-      /* Stats */
+      /* Stats: one tray strip of recessed cells. All four cells stretch to
+         the strip's height and each value is pinned to the cell's bottom,
+         so the values share one baseline at any width. */
       .stats {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 8px;
         margin-bottom: 14px;
-      }
-      .stat {
-        background: var(--surface);
+        background: linear-gradient(180deg, var(--surface-2), var(--board-deep));
         border: 1px solid var(--line);
         border-radius: var(--radius);
-        padding: 8px 6px 9px;
+        padding: 8px;
+        box-shadow: inset 0 1px 0 var(--board-hi);
+      }
+      .stat {
+        background: var(--cell);
+        border-radius: 10px;
+        padding: 8px 4px 9px;
         text-align: center;
-        box-shadow: var(--card-shadow);
+        box-shadow: inset 0 2px 5px rgba(64, 52, 28, 0.10);
         display: flex;
         flex-direction: column;
       }
-      /* Every label reserves exactly two lines of height: "HIGHEST TILE"
-         wraps onto two lines in its narrow card while the other labels fit
-         on one, and without the reserve its value sat lower than the rest.
-         A uniform label block (plus the value pinned to the bottom of the
-         card) keeps all four values on the same baseline. The label is
-         never truncated or clipped. */
-      .stat .k { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); line-height: 1.3; min-height: 2.6em; }
+      .stat .k { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); line-height: 1.3; }
       .stat .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; margin-top: auto; }
 
-      /* Tile queue */
+      /* Tile queue: a tray-toned panel in board language. The Shuffle
+         control lives in the panel's footer row, under a dashed bronze
+         divider (the merge ring's motif), so it belongs to the queue. */
       .queue {
         display: flex;
-        align-items: center;
-        gap: 14px;
-        background: var(--surface);
+        flex-direction: column;
+        background: linear-gradient(180deg, var(--surface-2), var(--board-deep));
         border: 1px solid var(--line);
         border-radius: var(--radius);
-        padding: 12px 14px;
+        padding: 10px 14px;
         margin-bottom: 8px;
-        box-shadow: var(--card-shadow);
-        /* Fixed height: inside this card, the "PLACE NEXT" label and the bag
-           composition text wrap or unwrap as the bag empties, and those wrap
-           changes used to resize the card and shift the board up and down.
-           A fixed card height (plus the fixed-height message line below)
-           means the board's on-screen position never moves. */
-        height: 112px;
+        box-shadow: var(--card-shadow), inset 0 1px 0 var(--board-hi);
+        /* Fixed height: the queue row and footer never change size as the
+           bag empties or charges come and go, and the fixed-height message
+           line below means the board's on-screen position never moves. */
+        height: 148px;
         overflow: hidden;
       }
+      .queue-main { display: flex; align-items: center; gap: 14px; flex: 1; }
       .queue .now-label, .queue .next-label {
         font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 5px;
         white-space: nowrap;
@@ -218,11 +233,43 @@
       .next-tiles { display: flex; gap: 6px; }
       .bag-info { margin-left: auto; text-align: right; }
       .bag-info .bag-count { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
-      /* Reserve two lines: the bag composition text wraps to 2 lines at a
-         full bag and 1 line later, and that wrap change used to resize the
-         queue card and shift the board. Fixed reserve = board never moves. */
-      .bag-info .bag-left { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; max-width: 150px; line-height: 1.4; min-height: 34px; }
       .bag-info .bag-cap { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 5px; }
+      /* The bag's remaining contents shown as tiles, not a text string:
+         one mini tile per value, its remaining count as a badge on the
+         tile. A value that has run out stays visible, dimmed, so the row
+         never changes shape. */
+      .bag-tiles { display: flex; gap: 9px; justify-content: flex-end; margin-top: 7px; }
+      .bag-tile {
+        position: relative;
+        width: 34px; height: 34px;
+        border-radius: 9px;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums;
+      }
+      .bag-tile.empty { opacity: 0.38; }
+      .bag-badge {
+        position: absolute; top: -7px; right: -7px;
+        min-width: 18px; height: 18px; padding: 0 4px;
+        border-radius: 999px;
+        background: var(--ink); color: var(--bg);
+        font-size: 10.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+      }
+      .queue-foot {
+        display: flex; align-items: center; justify-content: flex-end;
+        border-top: 2px dashed color-mix(in srgb, var(--merge-ring) 45%, transparent);
+        margin-top: 7px; padding-top: 7px;
+      }
+      /* Narrow phones: tighten the queue row so the now tile, the three
+         preview tiles, and the three bag tiles all fit without squeezing. */
+      @media (max-width: 430px) {
+        .queue { padding: 10px 12px; }
+        .queue-main { gap: 10px; }
+        .next-tiles .mini-tile { width: 34px; height: 34px; font-size: 14px; }
+        .bag-tiles { gap: 7px; }
+        .bag-tile { width: 31px; height: 31px; font-size: 13px; }
+      }
 
       .mini-tile {
         width: 40px; height: 40px;
@@ -233,24 +280,27 @@
       .mini-tile.now { width: 54px; height: 54px; font-size: 22px; border-radius: 12px; box-shadow: 0 0 0 2px var(--surface), 0 0 0 4.5px var(--merge-ring), 0 4px 14px rgba(180, 118, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
       .mini-tile.dim { opacity: 0.88; }
 
-      /* Shuffle control: its own fixed-height row under the queue card, so
-         showing, hiding, or disabling it can never shift the board. */
-      .shuffle-row { display: flex; justify-content: flex-end; align-items: center; height: 34px; }
+      /* Shuffle button, in the queue panel's footer: charges read as pips,
+         filled for a charge in hand, recessed for a spent one. */
       .shuffle-btn {
-        border: 1px solid var(--line);
-        background: var(--surface);
+        border: 1px solid var(--cell-edge);
+        background: var(--cell);
         color: var(--ink);
         font: inherit;
         font-size: 12.5px;
         font-weight: 600;
-        padding: 6px 13px;
-        border-radius: 999px;
+        padding: 5px 12px;
+        border-radius: 10px;
         cursor: pointer;
-        box-shadow: var(--card-shadow);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        display: inline-flex; align-items: center; gap: 8px;
       }
       .shuffle-btn:active { transform: scale(0.97); }
       .shuffle-btn:disabled { opacity: 0.45; cursor: default; }
       .shuffle-btn:disabled:active { transform: none; }
+      .shuffle-pips { display: inline-flex; gap: 4px; }
+      .pip { width: 8px; height: 8px; border-radius: 50%; background: transparent; box-shadow: inset 0 0 0 1.5px var(--ink-soft); opacity: 0.55; }
+      .pip.on { background: var(--merge-ring); box-shadow: none; opacity: 1; }
 
       .turn-line {
         /* Fixed height (3 lines at this size) so the board and everything
@@ -454,52 +504,84 @@
       }
       .cell .small-num { font-size: 0.72em; }
 
-      /* Game over overlay */
+      /* Game over: a full-screen takeover on the tray ground (fixed, so it
+         covers the whole screen, not just the board). Results are presented
+         as tiles and cells: the score on a large gold tile, the rest in
+         recessed cells. */
       .overlay {
-        position: absolute; inset: 0;
-        background: color-mix(in srgb, var(--bg) 78%, transparent);
-        backdrop-filter: blur(2px);
-        border-radius: 18px;
+        position: fixed; inset: 0;
+        background:
+          linear-gradient(color-mix(in srgb, var(--cell-edge) 42%, transparent) 1px, transparent 1px),
+          linear-gradient(90deg, color-mix(in srgb, var(--cell-edge) 42%, transparent) 1px, transparent 1px),
+          linear-gradient(180deg, var(--surface-2), var(--board-deep));
+        background-size: 76px 76px, 76px 76px, auto;
         display: none;
         align-items: center; justify-content: center;
-        padding: 16px;
-        z-index: 8;
+        padding: 20px 16px;
+        overflow-y: auto;
+        z-index: 60;
       }
       .overlay.open { display: flex; }
       .over-card {
-        background: var(--surface);
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        box-shadow: var(--shadow);
-        padding: 22px 20px 18px;
         text-align: center;
         width: 100%;
-        max-width: 340px;
+        max-width: 360px;
       }
       .over-card h2 {
         font-family: Georgia, "Iowan Old Style", serif;
-        margin: 0 0 4px; font-size: 24px; font-weight: 600;
+        margin: 0 0 4px; font-size: 26px; font-weight: 600;
       }
-      .over-card .mode-line { color: var(--ink-soft); font-size: 13px; margin-bottom: 14px; }
-      .over-stats { display: flex; justify-content: center; gap: 22px; margin-bottom: 16px; }
-      .over-stats .k { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
-      .over-stats .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
-      .over-actions { display: flex; gap: 8px; }
+      .over-card .mode-line { color: var(--ink-soft); font-size: 13px; margin-bottom: 16px; }
+      .over-score-tile {
+        background-color: #eeb93e; color: #473311;
+        border: 1px solid rgba(0, 0, 0, 0.10);
+        border-radius: 18px;
+        padding: 16px 18px 18px;
+        margin-bottom: 10px;
+        background-image: linear-gradient(165deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 52%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 6px rgba(31, 24, 10, 0.12), 0 3px 10px rgba(31, 24, 10, 0.22);
+      }
+      .over-score-tile .k { font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; opacity: 0.72; font-weight: 600; }
+      .over-score-tile .v { font-size: 46px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.15; }
+      .over-cells { display: flex; gap: 10px; margin-bottom: 18px; }
+      .over-cell {
+        flex: 1;
+        background: var(--cell);
+        border: 1px solid var(--cell-edge);
+        border-radius: 12px;
+        box-shadow: inset 0 2px 5px rgba(64, 52, 28, 0.10);
+        padding: 10px 8px 11px;
+      }
+      .over-cell .k { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+      .over-cell .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; }
+      .over-actions { display: flex; gap: 8px; align-items: center; }
+      .over-actions .btn:not(.primary) {
+        flex: 0 0 auto;
+        background: transparent; border-color: transparent; color: var(--ink-soft);
+        text-decoration: underline; text-underline-offset: 3px;
+        text-decoration-color: color-mix(in srgb, var(--ink-soft) 45%, transparent);
+      }
       .btn {
         flex: 1;
         font: inherit; font-size: 14px; font-weight: 600;
         padding: 11px 10px; border-radius: 12px; cursor: pointer;
         border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
       }
-      .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+      /* Primary buttons are gold tiles, like the Daily tile. */
+      .btn.primary {
+        background-color: #eeb93e; color: #473311;
+        border-color: rgba(0, 0, 0, 0.10);
+        background-image: linear-gradient(165deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 52%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 6px rgba(31, 24, 10, 0.12), 0 2px 5px rgba(31, 24, 10, 0.18);
+      }
       .btn:active { transform: scale(0.97); }
       .copy-status { font-size: 12.5px; color: var(--good); min-height: 17px; margin-top: 10px; }
       .share-text {
         display: none;
         width: 100%; margin-top: 8px;
         font: inherit; font-size: 12.5px;
-        background: var(--surface-2); color: var(--ink);
-        border: 1px solid var(--line); border-radius: 8px; padding: 8px;
+        background: var(--cell); color: var(--ink);
+        border: 1px solid var(--cell-edge); border-radius: 8px; padding: 8px;
       }
       .share-text.show { display: block; }
 
@@ -514,7 +596,7 @@
       .first-hint {
         display: none; align-items: center; gap: 10px;
         margin-top: 14px; padding: 10px 14px;
-        background: var(--surface); border: 1px solid var(--line);
+        background: linear-gradient(180deg, var(--surface-2), var(--board-deep)); border: 1px solid var(--line);
         border-radius: var(--radius); box-shadow: var(--card-shadow);
         font-size: 13.5px; color: var(--ink-soft);
       }
@@ -541,16 +623,16 @@
         position: relative;
         width: 100%; max-width: 432px;
         max-height: calc(100vh - 32px); overflow-y: auto;
-        background: var(--surface); color: var(--ink);
+        background: linear-gradient(180deg, var(--surface-2), var(--board-deep)); color: var(--ink);
         border: 1px solid var(--line); border-radius: 18px;
-        box-shadow: var(--shadow);
+        box-shadow: var(--shadow), inset 0 1px 0 var(--board-hi);
         padding: 20px 20px 18px;
       }
       .tut-panel h2 { font-family: Georgia, "Iowan Old Style", serif; font-size: 21px; font-weight: 600; margin: 0 40px 2px 0; }
       .tut-x {
         position: absolute; top: 8px; right: 8px;
         width: 34px; height: 34px; border-radius: 999px;
-        border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+        border: 0; background: transparent; color: var(--ink-soft);
         font: inherit; font-size: 17px; line-height: 1; cursor: pointer;
       }
       .tut-step { margin-top: 15px; }
@@ -558,12 +640,12 @@
       .tut-step p { font-size: 14px; line-height: 1.55; color: var(--ink-soft); margin: 0; }
       .tut-step p b, .score-example b { color: var(--ink); }
       .demo-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; }
-      .demo { display: grid; grid-template-columns: repeat(3, 30px); gap: 4px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 5px; }
+      .demo { display: grid; grid-template-columns: repeat(3, 30px); gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 5px; }
       .demo i { width: 30px; height: 30px; border-radius: 7px; background: var(--cell); border: 1px solid var(--cell-edge); display: flex; align-items: center; justify-content: center; font-style: normal; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
       .demo i.placed { box-shadow: inset 0 0 0 2px var(--merge-ring), 0 2px 5px rgba(31, 24, 10, 0.18); }
       .demo-cap { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); text-align: center; margin-top: 5px; }
       .demo-arrow { color: var(--accent); font-weight: 700; font-size: 18px; padding-top: 22px; }
-      .score-example { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font-size: 13.5px; line-height: 1.6; color: var(--ink-soft); margin-top: 10px; }
+      .score-example { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font-size: 13.5px; line-height: 1.6; color: var(--ink-soft); margin-top: 10px; }
       .tut-end { font-size: 13.5px; line-height: 1.55; color: var(--ink-soft); margin: 15px 0 0; }
       .tut-close { width: 100%; margin-top: 16px; }
       .tut-walk { width: 100%; margin-top: 16px; }
@@ -579,10 +661,10 @@
         height: 248px;
         margin-top: 14px;
         padding: 14px 16px;
-        background: var(--surface);
+        background: linear-gradient(180deg, var(--surface-2), var(--board-deep));
         border: 1px solid var(--line);
         border-radius: var(--radius);
-        box-shadow: var(--card-shadow);
+        box-shadow: var(--card-shadow), inset 0 1px 0 var(--board-hi);
       }
       .coach.open { display: flex; }
       .coach-head { display: flex; align-items: flex-start; gap: 10px; }
@@ -590,15 +672,16 @@
       .coach-x {
         margin-left: auto; flex: none;
         width: 32px; height: 32px; border-radius: 999px;
-        border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+        border: 0; background: transparent; color: var(--ink-soft);
         font: inherit; font-size: 16px; line-height: 1; cursor: pointer;
       }
       .coach-text { font-size: 14.5px; line-height: 1.55; color: var(--ink-soft); margin: 8px 0 0; flex: 1; overflow: hidden; }
       .coach-foot { display: flex; align-items: center; gap: 10px; margin-top: 10px; min-height: 40px; }
       .coach-progress { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
       .coach-dots { display: inline-flex; gap: 4px; }
-      .cdot { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
-      .cdot.on { background: var(--merge-ring); }
+      /* Step dots as mini cells: recessed squares, bronze once reached. */
+      .cdot { width: 9px; height: 9px; border-radius: 3px; background: var(--cell); border: 1px solid var(--cell-edge); box-shadow: inset 0 1px 3px rgba(64, 52, 28, 0.18); }
+      .cdot.on { background: var(--merge-ring); border-color: var(--merge-ring); box-shadow: none; }
       .coach-actions { margin-left: auto; display: flex; gap: 8px; }
       .coach-btn { flex: none; padding: 9px 13px; font-size: 13.5px; }
       .coach.nudge { animation: coachnudge 0.45s ease; }
@@ -629,19 +712,201 @@
       footer.note { text-align: center; color: var(--ink-soft); font-size: 12px; margin-top: 16px; }
       footer.credit { text-align: center; color: var(--ink-soft); font-size: 12px; line-height: 1.6; margin-top: 20px; }
       footer.credit p { margin: 0; }
+
+      /* ---------- Entrance (start screen) ---------- */
+      #entrance {
+        position: fixed; inset: 0; z-index: 40;
+        overflow: hidden;
+        display: flex; flex-direction: column;
+      }
+      #entrance.ent-hidden { display: none; }
+      .ent-field {
+        position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(180deg, var(--surface-2), var(--board-deep));
+        display: grid; gap: 7px; padding: 10px;
+        grid-auto-rows: 1fr;
+      }
+      .ent-cell {
+        background: var(--cell);
+        border: 1px solid var(--cell-edge);
+        border-radius: 14%;
+        box-shadow: inset 0 2px 5px rgba(64, 52, 28, 0.08);
+      }
+      .ent-main {
+        position: relative; z-index: 1;
+        display: flex; flex-direction: column; align-items: center;
+        height: 100%;
+        padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+      }
+      .ent-col-left, .ent-col-right { display: flex; flex-direction: column; align-items: center; }
+      .ent-col-left { margin-bottom: clamp(16px, 3.5vh, 30px); }
+      .ent-col-right { gap: 12px; }
+
+      .ent-hero { display: grid; grid-template-columns: repeat(2, auto); gap: clamp(8px, 2vmin, 12px); }
+      .ent-tile-wrap { position: relative; width: clamp(84px, 23vmin, 130px); height: clamp(84px, 23vmin, 130px); }
+      .ent-tile {
+        width: 100%; height: 100%;
+        border-radius: 18%;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-variant-numeric: tabular-nums;
+        font-size: clamp(38px, 10vmin, 56px);
+        background-image: linear-gradient(165deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 52%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 6px rgba(31, 24, 10, 0.12), 0 2px 5px rgba(31, 24, 10, 0.18);
+      }
+      .ent-sage { background-color: #cfd8c3; color: #2f3d27; }
+      .ent-gold { background-color: #eeb93e; color: #473311; animation: entPop 6.5s ease-in-out infinite; }
+      @media (prefers-color-scheme: dark) {
+        .ent-sage { background-color: #5b6a50; color: #eef3e4; }
+      }
+      .ent-ring {
+        position: absolute; inset: -9px;
+        border: 3px dashed var(--merge-ring);
+        border-radius: 22%;
+        pointer-events: none;
+        animation: entRing 6.5s ease-in-out infinite;
+      }
+      .ent-nudge-tl { animation: entNudgeTL 6.5s ease-in-out infinite; }
+      .ent-nudge-tr { animation: entNudgeTR 6.5s ease-in-out infinite; }
+      .ent-nudge-bl { animation: entNudgeBL 6.5s ease-in-out infinite; }
+      @keyframes entNudgeTL { 0%, 8% { transform: translate(0, 0); } 18% { transform: translate(5px, 5px); } 30%, 100% { transform: translate(0, 0); } }
+      @keyframes entNudgeTR { 0%, 8% { transform: translate(0, 0); } 18% { transform: translate(-3px, 5px); } 30%, 100% { transform: translate(0, 0); } }
+      @keyframes entNudgeBL { 0%, 8% { transform: translate(0, 0); } 18% { transform: translate(5px, -3px); } 30%, 100% { transform: translate(0, 0); } }
+      @keyframes entRing { 0%, 14% { transform: scale(1); opacity: 0.75; } 24% { transform: scale(1.07); opacity: 1; } 34%, 100% { transform: scale(1); opacity: 0.9; } }
+      @keyframes entPop { 0%, 18% { transform: scale(1); } 24% { transform: scale(1.13); } 32%, 100% { transform: scale(1); } }
+      @media (prefers-reduced-motion: reduce) {
+        .ent-nudge-tl, .ent-nudge-tr, .ent-nudge-bl, .ent-ring, .ent-gold { animation: none; }
+      }
+
+      .ent-title {
+        font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+        font-weight: 600;
+        font-size: clamp(46px, 12vmin, 68px);
+        line-height: 1.1;
+        margin-top: clamp(14px, 3vh, 24px);
+      }
+      .ent-title .accent-word { color: var(--accent); }
+      .ent-tagline { color: var(--ink-soft); font-size: 14px; margin: 6px 0 0; }
+
+      .ent-mode {
+        width: min(430px, 88vw);
+        border-radius: 18px;
+        padding: 18px 20px;
+        display: flex; align-items: center; gap: 12px;
+        cursor: pointer;
+        border: 1px solid rgba(0, 0, 0, 0.10);
+        font: inherit; text-align: left;
+        background-image: linear-gradient(165deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 52%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 6px rgba(31, 24, 10, 0.12), 0 2px 5px rgba(31, 24, 10, 0.18);
+      }
+      .ent-mode:active { transform: scale(0.98); }
+      .ent-mode .ent-mode-label { font-size: 22px; font-weight: 700; }
+      #entFree { background-color: #cfd8c3; color: #2f3d27; }
+      #entDaily { background-color: #eeb93e; color: #473311; }
+      @media (prefers-color-scheme: dark) {
+        #entFree { background-color: #5b6a50; color: #eef3e4; }
+        #entFree .ent-chip { background: rgba(238, 243, 228, 0.14); }
+      }
+      .ent-chip {
+        margin-left: auto;
+        background: rgba(47, 61, 39, 0.10);
+        box-shadow: inset 0 2px 5px rgba(64, 52, 28, 0.20);
+        border-radius: 10px;
+        padding: 6px 11px;
+        font-size: 13px; font-weight: 600;
+        white-space: nowrap;
+      }
+      #entDaily .ent-chip { background: rgba(71, 51, 17, 0.10); }
+
+      /* One line at phone widths: no-wrap, tighter type and padding, and
+         separators that are flex items (so one can never strand alone on a
+         second line). The full row measures ~300px at 390px wide. */
+      .ent-row { display: flex; align-items: center; gap: 2px; margin-top: 6px; flex-wrap: nowrap; justify-content: center; width: 100%; max-width: 430px; }
+      .ent-row .help-sep { flex: none; }
+      .ent-link {
+        background: none; border: 0; font: inherit;
+        font-size: 13px; font-weight: 600; color: var(--ink-soft);
+        cursor: pointer; padding: 10px 5px; min-height: 40px;
+        white-space: nowrap; flex: none;
+      }
+      .ent-link[aria-pressed="true"] { color: var(--accent); }
+      .ent-sound {
+        background: none; border: 0; color: var(--ink-soft);
+        cursor: pointer; padding: 10px 5px; min-height: 40px;
+        display: inline-flex; align-items: center; flex: none;
+      }
+      .ent-sound .ic { width: 17px; height: 17px; display: block; }
+      .ent-sound .ic-off { display: none; }
+      .ent-sound[aria-pressed="false"] .ic-on { display: none; }
+      .ent-sound[aria-pressed="false"] .ic-off { display: block; }
+
+      .ent-credit {
+        margin-top: auto;
+        display: flex; justify-content: center; gap: 0.9em; flex-wrap: wrap;
+        text-align: center; font-size: 12px; color: var(--ink-soft);
+      }
+
+      .home-btn { display: inline-flex; align-items: center; padding: 8px 10px; }
+      .home-btn .ic { width: 16px; height: 16px; display: block; }
+
+      @media (orientation: landscape) and (max-height: 540px) {
+        .ent-main {
+          display: grid;
+          grid-template-columns: auto auto;
+          grid-template-rows: 1fr auto;
+          align-items: center;
+          justify-content: center;
+          column-gap: clamp(28px, 6vw, 72px);
+        }
+        .ent-col-left { margin-bottom: 0; }
+        .ent-credit { grid-column: 1 / -1; margin-top: 10px; }
+      }
     </style>
   </head>
-  <body>
+  <body class="at-entrance">
+    <div id="entrance">
+      <div class="ent-field" id="entField" aria-hidden="true"></div>
+      <div class="ent-main">
+        <div class="ent-col-left">
+          <div class="ent-hero" aria-hidden="true">
+            <div class="ent-tile-wrap"><div class="ent-tile ent-sage ent-nudge-tl">2</div></div>
+            <div class="ent-tile-wrap"><div class="ent-tile ent-sage ent-nudge-tr">2</div></div>
+            <div class="ent-tile-wrap"><div class="ent-tile ent-sage ent-nudge-bl">2</div></div>
+            <div class="ent-tile-wrap"><div class="ent-tile ent-gold">4</div><span class="ent-ring"></span></div>
+          </div>
+          <div class="ent-title">Thr<span class="accent-word">ink</span></div>
+          <p class="ent-tagline">Set the trap. Spring the chain.</p>
+        </div>
+        <div class="ent-col-right">
+          <button type="button" class="ent-mode" id="entFree"><span class="ent-mode-label">Free Play</span><span class="ent-chip" id="entFreeChip">New</span></button>
+          <button type="button" class="ent-mode" id="entDaily"><span class="ent-mode-label">Daily</span><span class="ent-chip" id="entDailyChip">New</span></button>
+          <div class="ent-row">
+            <button type="button" id="entHelp" class="ent-link">How to Play</button>
+            <span class="help-sep" aria-hidden="true">·</span>
+            <button type="button" id="entWalk" class="ent-link">Walkthrough</button>
+            <span class="help-sep" aria-hidden="true">·</span>
+            <button type="button" id="entSoundBtn" class="ent-sound" aria-pressed="true" aria-label="Sound on">
+              <svg class="ic ic-on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9.5v5h3.5L12 19.5v-15L6.5 9.5H3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.4 7.4 0 0 1 0 10.4"/></svg>
+              <svg class="ic ic-off" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9.5v5h3.5L12 19.5v-15L6.5 9.5H3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+            </button>
+            <span class="help-sep" aria-hidden="true">·</span>
+            <button type="button" id="entAmbBtn" class="ent-link" aria-pressed="false">Ambience</button>
+          </div>
+        </div>
+        <div class="ent-credit"><span>Created by Matthew Haber</span><span>© 2026 Matthew Haber. All rights reserved.</span></div>
+      </div>
+    </div>
     <div class="wrap">
       <header class="top">
         <div class="title-row">
           <svg class="logo-mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="4" y="4" width="88" height="88" rx="18" fill="#e7dfc9" stroke="#c9bc9c" stroke-width="2"/><rect x="10" y="10" width="24" height="24" rx="6" fill="#f2ecdc"/><rect x="36" y="10" width="24" height="24" rx="6" fill="#eeb93e"/><rect x="62" y="10" width="24" height="24" rx="6" fill="#f2ecdc"/><rect x="10" y="36" width="24" height="24" rx="6" fill="#cfd8c3"/><rect x="36" y="36" width="24" height="24" rx="6" fill="#cfd8c3"/><rect x="62" y="36" width="24" height="24" rx="6" fill="#cfd8c3"/><rect x="10" y="62" width="24" height="24" rx="6" fill="#f2ecdc"/><rect x="36" y="62" width="24" height="24" rx="6" fill="#f2ecdc"/><rect x="62" y="62" width="24" height="24" rx="6" fill="#f2ecdc"/><text x="48" y="22" font-family="ui-sans-system, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#473311">4</text><text x="22" y="48" font-family="ui-sans-system, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#2f3d27">2</text><text x="48" y="48" font-family="ui-sans-system, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#2f3d27">2</text><text x="74" y="48" font-family="ui-sans-system, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#2f3d27">2</text><rect x="33.5" y="33.5" width="29" height="29" rx="8" fill="none" stroke="#b4762a" stroke-width="2.5" stroke-dasharray="5 4"/><path d="M0 -6 C0.8 -1.6 1.6 -0.8 6 0 C1.6 0.8 0.8 1.6 0 6 C-0.8 1.6 -1.6 0.8 -6 0 C-1.6 -0.8 -0.8 -1.6 0 -6 Z" transform="translate(13 13)" fill="#b4762a"/><path d="M0 -6 C0.8 -1.6 1.6 -0.8 6 0 C1.6 0.8 0.8 1.6 0 6 C-0.8 1.6 -1.6 0.8 -6 0 C-1.6 -0.8 -0.8 -1.6 0 -6 Z" transform="translate(83 83)" fill="#b4762a"/></svg>
           <div>
             <h1>Thr<span class="accent-word">ink</span></h1>
-            <p class="tagline">Set the trap. Spring the chain.</p>
           </div>
         </div>
         <div class="top-actions">
+          <button class="new-btn home-btn" id="homeBtn" type="button" aria-label="Back to start">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 11.5 12 4l8 7.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M6.5 10v9.5h11V10"/></svg>
+          </button>
           <button class="new-btn help-btn" id="helpBtn" type="button" aria-label="How to play"><span class="q" aria-hidden="true">?</span><span class="btn-label">How to play</span></button>
           <button class="new-btn sound-btn" id="soundBtn" type="button" aria-pressed="true" aria-label="Sound on">
             <svg class="ic ic-on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9.5v5h3.5L12 19.5v-15L6.5 9.5H3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.4 7.4 0 0 1 0 10.4"/></svg>
@@ -653,13 +918,10 @@
       </header>
 
       <div class="tabs" role="tablist" aria-label="Game mode">
-        <button class="tab" id="tabFree" role="tab" type="button" aria-selected="true">
-          Free Play
-          <span class="sub">Random bags, endless runs</span>
-        </button>
+        <button class="tab" id="tabFree" role="tab" type="button" aria-selected="true">Free Play</button>
         <button class="tab" id="tabDaily" role="tab" type="button" aria-selected="false">
           Daily
-          <span class="sub" id="dailySub">Same tiles for everyone today</span>
+          <span class="sub" id="dailySub"></span>
         </button>
       </div>
 
@@ -671,24 +933,29 @@
       </section>
 
       <section class="queue" aria-label="Upcoming tiles">
-        <div>
-          <div class="now-label">Place next</div>
-          <div class="mini-tile now" id="nowTile">2</div>
+        <div class="queue-main">
+          <div>
+            <div class="now-label">Place next</div>
+            <div class="mini-tile now" id="nowTile">2</div>
+          </div>
+          <div>
+            <div class="next-label">Then</div>
+            <div class="next-tiles" id="nextTiles"></div>
+          </div>
+          <div class="bag-info">
+            <div class="bag-cap">In this bag</div>
+            <div class="bag-count"><span id="bagCount">10</span> left</div>
+            <div class="bag-tiles" id="bagLeft">
+              <span class="bag-tile t2" id="bagTile2">2<span class="bag-badge" id="bagBadge2">7</span></span>
+              <span class="bag-tile t4" id="bagTile4">4<span class="bag-badge" id="bagBadge4">2</span></span>
+              <span class="bag-tile t8" id="bagTile8">8<span class="bag-badge" id="bagBadge8">1</span></span>
+            </div>
+          </div>
         </div>
-        <div>
-          <div class="next-label">Then</div>
-          <div class="next-tiles" id="nextTiles"></div>
-        </div>
-        <div class="bag-info">
-          <div class="bag-cap">In this bag</div>
-          <div class="bag-count"><span id="bagCount">10</span> left</div>
-          <div class="bag-left" id="bagLeft"></div>
+        <div class="queue-foot">
+          <button class="shuffle-btn" id="shuffleBtn" type="button">Shuffle <span class="shuffle-pips" id="shuffleCount"></span></button>
         </div>
       </section>
-
-      <div class="shuffle-row">
-        <button class="shuffle-btn" id="shuffleBtn" type="button">Shuffle <span id="shuffleCount">(1)</span></button>
-      </div>
 
       <div class="turn-line" id="turnLine">Tap an empty cell to place the tile.</div>
 
@@ -698,10 +965,10 @@
           <div class="over-card">
             <h2>Board full</h2>
             <div class="mode-line" id="overMode"></div>
-            <div class="over-stats">
-              <div><div class="k">Score</div><div class="v" id="overScore">0</div></div>
-              <div><div class="k">Highest tile</div><div class="v" id="overHigh">–</div></div>
-              <div><div class="k">Turns</div><div class="v" id="overTurns">0</div></div>
+            <div class="over-score-tile"><div class="k">Score</div><div class="v" id="overScore">0</div></div>
+            <div class="over-cells">
+              <div class="over-cell"><div class="k">Highest tile</div><div class="v" id="overHigh">–</div></div>
+              <div class="over-cell"><div class="k">Turns</div><div class="v" id="overTurns">0</div></div>
             </div>
             <div class="over-actions">
               <button class="btn primary" id="againBtn" type="button">Play again</button>
@@ -779,7 +1046,7 @@
         </div>
       </div>
 
-      <footer class="note">Free Play deals fresh bags every game. Daily deals everyone the same tile order for the date shown, and replays are allowed while we prototype.</footer>
+      <footer class="note">Daily deals everyone the same tile order for the date shown.</footer>
 
       <footer class="credit">
         <p>Created by Matthew Haber</p>
@@ -883,7 +1150,11 @@
         /* Walkthrough play is practice on a scripted board: it must never
            move a Best score or write one to storage. */
         if (typeof walk !== "undefined" && walk) return;
-        if (score > best[mode]) { best[mode] = score; saveBest(); }
+        if (score > best[mode]) {
+          best[mode] = score;
+          saveBest();
+          if (typeof refreshEntChips === "function") refreshEntChips();
+        }
       }
       best = readStoredBest();
       saveBest();   // writes the canonical record, including any adopted legacy scores
@@ -898,6 +1169,16 @@
         nextTiles: document.getElementById("nextTiles"),
         bagCount: document.getElementById("bagCount"),
         bagLeft: document.getElementById("bagLeft"),
+        bagTiles: {
+          "2": document.getElementById("bagTile2"),
+          "4": document.getElementById("bagTile4"),
+          "8": document.getElementById("bagTile8")
+        },
+        bagBadges: {
+          "2": document.getElementById("bagBadge2"),
+          "4": document.getElementById("bagBadge4"),
+          "8": document.getElementById("bagBadge8")
+        },
         statScore: document.getElementById("statScore"),
         statBest: document.getElementById("statBest"),
         statHigh: document.getElementById("statHigh"),
@@ -925,7 +1206,7 @@
         coachExit: document.getElementById("coachExit"),
         shell: document.querySelector(".board-shell")
       };
-      el.dailySub.textContent = "Daily · " + dailyDate;
+      el.dailySub.textContent = dailyDate;
 
       /* ---------- Sound: fully synthesized with Web Audio, no audio files ---------- */
       var SOUND_KEY = "chain-placement-sound";
@@ -1087,18 +1368,39 @@
       }
       /* Chain reward: one bright ascending arpeggio flourish per placement
          that chains (2+ merge steps), played after the final merge lands.
-         Longer chains (3+) add a fifth, higher note. Under 0.7s total. */
+         Longer chains (3+) add a fifth, higher note. Under 0.7s total.
+         Pitched in the merge ladder's A family (A, C#, E, A; C# on top for
+         chains of 3+), so the flourish and the chimes share one key. */
       function playChainReward(step) {
         var ctx = ensureAudio();
         if (!ctx) return;
         try {
-          var notes = [523.25, 659.25, 783.99, 1046.5];
-          if (step >= 3) notes.push(1318.51);
+          var notes = [440, 554.37, 659.25, 880];
+          if (step >= 3) notes.push(1108.73);
           for (var i = 0; i < notes.length; i++) {
             toneDelayed(ctx, notes[i], 0.60, 0.38, "sine", i * 0.07);
             toneDelayed(ctx, notes[i] * 2, 0.16, 0.26, "sine", i * 0.07);
           }
         } catch (e) {}
+      }
+      /* Game over: a soft closing figure in A, in the same sine voice as
+         the merge chimes: a low E settling down to A, two notes, modest
+         gain. Played once when the game-over screen opens. */
+      function playGameOver() {
+        var ctx = ensureAudio();
+        if (!ctx) return;
+        try {
+          tone(ctx, 164.81, 0.32, 0.55, "sine");
+          toneDelayed(ctx, 110, 0.34, 0.8, "sine", 0.22);
+        } catch (e) {}
+      }
+      /* Chrome tap for the primary tile buttons: the placement click
+         transient on its own, at low gain, so the big tiles are not silent
+         without making every control noisy. */
+      function playChromeClick() {
+        var ctx = ensureAudio();
+        if (!ctx) return;
+        try { clickTransient(ctx, 0.15); } catch (e) {}
       }
       /* Brighter chime per merge; each chain step climbs a pentatonic ladder
          and gains a little presence. Ladder caps at the top rung. */
@@ -1115,16 +1417,29 @@
       }
 
       var soundBtn = document.getElementById("soundBtn");
+      var entSoundBtn = document.getElementById("entSoundBtn");
       function renderSoundBtn() {
-        soundBtn.setAttribute("aria-pressed", soundOn ? "true" : "false");
-        soundBtn.setAttribute("aria-label", soundOn ? "Sound on" : "Sound off");
+        var pressed = soundOn ? "true" : "false";
+        var label = soundOn ? "Sound on" : "Sound off";
+        soundBtn.setAttribute("aria-pressed", pressed);
+        soundBtn.setAttribute("aria-label", label);
+        if (entSoundBtn) {
+          entSoundBtn.setAttribute("aria-pressed", pressed);
+          entSoundBtn.setAttribute("aria-label", label);
+        }
       }
-      soundBtn.addEventListener("click", function () {
+      /* One shared toggle for both sound buttons (header and entrance):
+         flips the one soundOn state, persists it, syncs both buttons, and
+         plays a confirmation tap when turning on. Turning off also stops
+         the entrance ambience, which cannot outlive sound. */
+      function toggleSound() {
         soundOn = !soundOn;
         try { window.localStorage.setItem(SOUND_KEY, soundOn ? "on" : "off"); } catch (e) {}
         renderSoundBtn();
         if (soundOn) playPlace();   // little confirmation tap, inside the gesture
-      });
+        else if (typeof ambOn !== "undefined" && ambOn) stopAmbience();
+      }
+      soundBtn.addEventListener("click", toggleSound);
       renderSoundBtn();
 
       /* Re-prime the context on any tap and when the page becomes visible
@@ -1138,6 +1453,17 @@
       document.addEventListener("visibilitychange", function () {
         if (document.visibilityState === "visible" && audioCtx) ensureAudio();
       });
+
+      /* ---------- Haptics: guarded vibration ticks ----------
+         Silent no-op wherever the Vibration API does not exist (notably
+         iPhone Safari). Patterns escalate with chain length so a long
+         chain feels different from a single merge. */
+      function buzz(pattern) { try { if (navigator && typeof navigator.vibrate === "function") navigator.vibrate(pattern); } catch (e) {} }
+      function chainBuzz(step) {
+        if (step === 2) return [10, 30, 14];
+        if (step === 3) return [10, 30, 14, 30, 18];
+        return [10, 30, 14, 30, 18, 30, 22];
+      }
 
       function tileClass(v) {
         if (v >= 4096) return "tbig";
@@ -1330,9 +1656,13 @@
         el.bagCount.textContent = String(rem.length);
         var counts = {};
         rem.forEach(function (v) { counts[v] = (counts[v] || 0) + 1; });
-        var parts = Object.keys(counts).sort(function (a, b) { return a - b; })
-          .map(function (k) { return counts[k] + " × " + k; });
-        el.bagLeft.textContent = parts.length ? parts.join(" · ") : "";
+        /* Bag contents as mini tiles with count badges (2, 4, 8). */
+        [2, 4, 8].forEach(function (v) {
+          var badge = el.bagBadges[String(v)];
+          var tile = el.bagTiles[String(v)];
+          if (badge) badge.textContent = String(counts[v] || 0);
+          if (tile) tile.classList.toggle("empty", !counts[v]);
+        });
       }
       function renderStats() {
         el.statScore.textContent = fmt(score);
@@ -1341,7 +1671,13 @@
         el.statTurns.textContent = String(turns);
       }
       function renderShuffleBtn() {
-        el.shuffleCount.textContent = "(" + shuffleCharges + ")";
+        /* Charges as pips: one per charge the player can hold, filled for
+           each charge in hand. */
+        var pips = "";
+        for (var i = 0; i < SHUFFLE_MAX; i++) {
+          pips += '<span class="pip' + (i < shuffleCharges ? " on" : "") + '"></span>';
+        }
+        el.shuffleCount.innerHTML = pips;
         el.shuffleBtn.disabled = shuffleCharges <= 0 || busy || over;
       }
       function renderAll(marks) { renderBoard(marks); renderQueue(); renderStats(); renderShuffleBtn(); }
@@ -1400,6 +1736,7 @@
         marks[r + "," + c] = "just-placed";
         renderAll(marks);
         playPlace();
+        buzz(8);
         await sleep(190);
 
         var total = 0, step = 0;
@@ -1425,6 +1762,7 @@
           pmarks[r + "," + c] = "merging";
           renderAll(pmarks);
           playMerge(step);
+          buzz(12);
           await sleep(240);
         }
 
@@ -1441,16 +1779,15 @@
             var b = document.createElement("b");
             b.textContent = "+" + fmt(total) + " points";
             el.turnLine.appendChild(b);
-            el.turnLine.appendChild(document.createTextNode(" for that placement."));
           } else {
             el.turnLine.innerHTML = "";
             var b2 = document.createElement("b");
-            b2.textContent = "+" + fmt(total) + " points";
+            b2.textContent = "+" + fmt(total);
             el.turnLine.appendChild(b2);
-            el.turnLine.appendChild(document.createTextNode(" — merged into a " + fmt(board[r][c]) + "."));
+            el.turnLine.appendChild(document.createTextNode(" · merged into a " + fmt(board[r][c])));
           }
         } else {
-          el.turnLine.textContent = "No merge — a group needs 3 connected tiles of the same number. The " + value + " sits there as bait; complete its group to spring it.";
+          el.turnLine.textContent = "No merge: that tile is bait.";
         }
 
         /* A fresh bag was dealt during this turn's draws and a shuffle
@@ -1470,6 +1807,7 @@
             /* Reward moment: one flourish, gold score, glowing tile, sparkles,
                and a brief golden glow on the board edge. */
             playChainReward(step);
+            buzz(chainBuzz(step));
             spawnSparkles(r, c);
             el.board.classList.add("chain-flash");
             setTimeout(function () { el.board.classList.remove("chain-flash"); }, 950);
@@ -1486,7 +1824,7 @@
       function startGame() {
         if (typeof walk !== "undefined" && walk) return;   // never reset a real game out from under the walkthrough
         dailyDate = localDateString(new Date());
-        el.dailySub.textContent = "Daily · " + dailyDate;
+        el.dailySub.textContent = dailyDate;
         rng = mode === "daily" ? mulberry32(hashString("chain-placement:" + dailyDate)) : Math.random;
         board = [];
         for (var r = 0; r < BOARD_SIZE; r++) board.push(new Array(BOARD_SIZE).fill(0));
@@ -1505,6 +1843,10 @@
       }
       function endGame() {
         over = true;
+        buzz([12, 40, 12]);
+        /* The closing figure sounds once per real game over; the
+           walkthrough never ends a real game, so it stays silent there. */
+        if (!(typeof walk !== "undefined" && walk)) playGameOver();
         noteBest();
         renderStats();
         renderShuffleBtn();
@@ -1531,11 +1873,11 @@
         el.tabDaily.setAttribute("aria-selected", mode === "daily" ? "true" : "false");
         startGame();
       }
-      el.tabFree.addEventListener("click", function () { setMode("free"); });
-      el.tabDaily.addEventListener("click", function () { setMode("daily"); });
+      el.tabFree.addEventListener("click", function () { playChromeClick(); setMode("free"); });
+      el.tabDaily.addEventListener("click", function () { playChromeClick(); setMode("daily"); });
       el.shuffleBtn.addEventListener("click", doShuffle);
       document.getElementById("newGameBtn").addEventListener("click", startGame);
-      document.getElementById("againBtn").addEventListener("click", startGame);
+      document.getElementById("againBtn").addEventListener("click", function () { playChromeClick(); startGame(); });
       document.getElementById("copyBtn").addEventListener("click", function () {
         var text = shareString();
         el.shareText.value = text;
@@ -1691,7 +2033,7 @@
         el.copyStatus.textContent = s.copyStatus;
         el.shareText.value = s.shareValue;
         el.shareText.classList.toggle("show", s.shareShow);
-        el.dailySub.textContent = "Daily · " + dailyDate;
+        el.dailySub.textContent = dailyDate;
         el.tabFree.setAttribute("aria-selected", mode === "free" ? "true" : "false");
         el.tabDaily.setAttribute("aria-selected", mode === "daily" ? "true" : "false");
         renderAll();
@@ -1830,6 +2172,197 @@
         closeTut();
         startWalkthrough();
       });
+
+      /* ---------- Entrance (start screen) ----------
+         Purely additive over the game behind it, which initializes exactly
+         as before (the startGame() call at the bottom of this script, mode
+         "free"). Entering a mode never touches game state beyond the same
+         setMode() call the mode tabs make, and only when the mode differs,
+         so revealing the already-running game or re-entering the current
+         mode can never reset a game in progress. */
+      var entranceEl = document.getElementById("entrance");
+
+      function refreshEntChips() {
+        var fc = document.getElementById("entFreeChip");
+        var dc = document.getElementById("entDailyChip");
+        if (fc) fc.textContent = best.free > 0 ? "Best " + fmt(best.free) : "New";
+        if (dc) {
+          var label = new Date(dailyDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+          dc.textContent = best.daily > 0 ? label + " · Best " + fmt(best.daily) : label + " · New";
+        }
+      }
+
+      /* Fill the entrance field with recessed tray cells at a ~76px pitch,
+         one extra row and column so the field always bleeds past the edges. */
+      function fillEntField() {
+        var field = document.getElementById("entField");
+        if (!field) return;
+        var pitch = 76;
+        var cols = Math.ceil(window.innerWidth / pitch) + 1;
+        var rows = Math.ceil(window.innerHeight / pitch) + 1;
+        field.style.gridTemplateColumns = "repeat(" + cols + ", 1fr)";
+        var html = "";
+        for (var i = 0; i < cols * rows; i++) html += '<div class="ent-cell"></div>';
+        field.innerHTML = html;
+      }
+      var entFieldTimer = null;
+      function fillEntFieldSoon() {
+        if (entFieldTimer) clearTimeout(entFieldTimer);
+        entFieldTimer = setTimeout(fillEntField, 120);
+      }
+      window.addEventListener("resize", fillEntFieldSoon);
+      window.addEventListener("orientationchange", fillEntFieldSoon);
+      fillEntField();
+      refreshEntChips();
+
+      /* ---------- Ambience: entrance-only generative pad (staging) ----------
+         One slow chord loop in the merge chime's key family (A major),
+         off by default, never persisted, and never heard in the game view:
+         enterMode(), the entrance Walkthrough button, turning sound off,
+         and pagehide all stop it. Total level stays far under the chimes. */
+      var ambOn = false, ambTimer = null, ambGain = null, ambNodes = [], ambStep = 0;
+      var AMB_CHORDS = [
+        [110.00, 164.81, 277.18],   // A major
+        [82.41, 123.47, 207.65],    // E major
+        [138.59, 164.81, 207.65],   // C# minor
+        [82.41, 123.47, 207.65]     // E major
+      ];
+      var AMB_LEVELS = [0.16, 0.11, 0.07];
+      function ambChord() {
+        var ctx = audioCtx;
+        if (!ctx || !ambGain || !ambOn) return;
+        try {
+          var chord = AMB_CHORDS[ambStep % AMB_CHORDS.length];
+          ambStep++;
+          var t = ctx.currentTime;
+          for (var i = 0; i < chord.length; i++) {
+            var osc = ctx.createOscillator();
+            osc.type = i === 2 ? "triangle" : "sine";
+            osc.frequency.value = chord[i];
+            if (i === 2) osc.detune.value = 5;
+            var g = ctx.createGain();
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.linearRampToValueAtTime(AMB_LEVELS[i], t + 2.4);
+            g.gain.setValueAtTime(AMB_LEVELS[i], t + 4.4);
+            g.gain.linearRampToValueAtTime(0.0001, t + 7.0);
+            osc.connect(g);
+            g.connect(ambGain);
+            osc.start(t);
+            osc.stop(t + 7.05);
+            ambNodes.push(osc);
+            ambNodes.push(g);
+          }
+          if (ambNodes.length > 24) ambNodes.splice(0, ambNodes.length - 12);
+        } catch (e) { /* ambience is decorative: fail silent */ }
+      }
+      function startAmbience() {
+        if (ambOn) return;
+        var ctx = ensureAudio();
+        if (!ctx || !soundOn) return;
+        try {
+          ambGain = ctx.createGain();
+          ambGain.gain.value = 0;
+          ambGain.connect(masterGain || ctx.destination);
+          ambGain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 2.0);
+          ambOn = true;
+          ambStep = 0;
+          ambChord();
+          ambTimer = setInterval(ambChord, 7000);
+          var b = document.getElementById("entAmbBtn");
+          if (b) b.setAttribute("aria-pressed", "true");
+        } catch (e) { ambOn = false; ambGain = null; }
+      }
+      function stopAmbience() {
+        if (ambTimer) { clearInterval(ambTimer); ambTimer = null; }
+        var nodes = ambNodes; ambNodes = [];
+        var g = ambGain; ambGain = null;
+        ambOn = false;
+        var b = document.getElementById("entAmbBtn");
+        if (b) b.setAttribute("aria-pressed", "false");
+        if (g && audioCtx) {
+          try {
+            var t = audioCtx.currentTime;
+            g.gain.cancelScheduledValues(t);
+            g.gain.setValueAtTime(g.gain.value, t);
+            g.gain.linearRampToValueAtTime(0.0001, t + 0.8);
+          } catch (e) {}
+        }
+        setTimeout(function () {
+          for (var i = 0; i < nodes.length; i++) {
+            try { if (nodes[i].stop) nodes[i].stop(); } catch (e) {}
+            try { nodes[i].disconnect(); } catch (e) {}
+          }
+          if (g) { try { g.disconnect(); } catch (e) {} }
+        }, 1000);
+      }
+      document.getElementById("entAmbBtn").addEventListener("click", function () {
+        if (ambOn) stopAmbience();
+        else if (soundOn) startAmbience();
+      });
+      document.addEventListener("pagehide", function () { stopAmbience(); });
+
+      /* ---------- Entrance show / hide / mode entry ---------- */
+      /* Scroll lock: while the entrance is up, the game layer behind it
+         must not scroll or rubber-band (iOS Safari scrolls a fixed
+         overlay's ancestors unless the body itself is pinned). Pinning the
+         body with position: fixed and restoring the exact scroll offset on
+         unlock means no layout shift and no lost place; once unlocked the
+         game view scrolls normally again. */
+      var lockedScrollY = null;
+      function lockScroll() {
+        if (lockedScrollY !== null) return;
+        lockedScrollY = window.scrollY || 0;
+        var b = document.body;
+        b.style.position = "fixed";
+        b.style.top = (-lockedScrollY) + "px";
+        b.style.left = "0";
+        b.style.right = "0";
+        b.style.width = "100%";
+        b.style.overflow = "hidden";
+      }
+      function unlockScroll() {
+        if (lockedScrollY === null) return;
+        var y = lockedScrollY;
+        lockedScrollY = null;
+        var b = document.body;
+        b.style.position = "";
+        b.style.top = "";
+        b.style.left = "";
+        b.style.right = "";
+        b.style.width = "";
+        b.style.overflow = "";
+        window.scrollTo(0, y);
+      }
+      function hideEntrance() {
+        entranceEl.classList.add("ent-hidden");
+        document.body.classList.remove("at-entrance");
+        unlockScroll();
+      }
+      function showEntrance() {
+        if (typeof walk !== "undefined" && walk) return;   // never pull the rug from the walkthrough
+        refreshEntChips();
+        entranceEl.classList.remove("ent-hidden");
+        document.body.classList.add("at-entrance");
+        lockScroll();
+      }
+      lockScroll();   // the entrance is visible on load
+      function enterMode(m) {
+        buzz(8);
+        playChromeClick();
+        stopAmbience();
+        hideEntrance();
+        if (m !== mode) setMode(m);
+      }
+      document.getElementById("entFree").addEventListener("click", function () { enterMode("free"); });
+      document.getElementById("entDaily").addEventListener("click", function () { enterMode("daily"); });
+      document.getElementById("entHelp").addEventListener("click", openTut);
+      document.getElementById("entWalk").addEventListener("click", function () {
+        stopAmbience();
+        hideEntrance();
+        startWalkthrough();
+      });
+      if (entSoundBtn) entSoundBtn.addEventListener("click", toggleSound);
+      document.getElementById("homeBtn").addEventListener("click", showEntrance);
 
       startGame();
     </script>
