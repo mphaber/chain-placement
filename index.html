@@ -1087,6 +1087,24 @@
           return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
         };
       }
+      /* A mulberry32 stream that exposes its seed and draw count, so an
+         in-progress game can be saved and later resumed with the deal
+         sequence continuing identically. The values produced are exactly
+         mulberry32(seed)'s; the wrapper only counts the calls. */
+      function seededRng(seed) {
+        var next = mulberry32(seed);
+        var f = function () { f.draws++; return next(); };
+        f.seed = seed >>> 0;
+        f.draws = 0;
+        return f;
+      }
+      /* Rebuild a stream at a saved position: re-deal the draws already
+         taken (they are discarded) so the next draw is the saved game's. */
+      function rngFromState(seed, draws) {
+        var f = seededRng(seed);
+        for (var i = 0; i < draws; i++) f();
+        return f;
+      }
       function localDateString(d) {
         var m = String(d.getMonth() + 1).padStart(2, "0");
         var day = String(d.getDate()).padStart(2, "0");
@@ -1166,6 +1184,118 @@
       window.addEventListener("pagehide", saveBest);
       document.addEventListener("visibilitychange", function () {
         if (document.visibilityState === "hidden") saveBest();
+      });
+
+      /* ---------- In-progress game persistence ----------
+         Each mode's unfinished game is saved under its own key
+         ("chain-placement-save-free" / "chain-placement-save-daily"), so a
+         run survives a reload, a closed tab, or an app switch and resumes
+         exactly: board, hand and queue, the undealt pool, shuffle charges,
+         score, turns, and the RNG position (seed + draws taken), which is
+         what makes the deals after a resume identical to the deals the
+         uninterrupted game would have produced. The save is rewritten
+         after every settled change (a placement once its chains resolve,
+         a shuffle, a new game) and flushed again on pagehide. Game over
+         clears the mode's save, and starting a new game overwrites it, so
+         a finished game never resurrects. A Daily save carries its date
+         and is ignored and cleared once the date is no longer today. The
+         payload carries a version; anything unparseable, malformed, or
+         from another version is discarded silently and a fresh game
+         starts. The walkthrough never writes a save (it plays on a
+         snapshot of the real game, restored on exit), and restoring never
+         writes Best: Best still only moves through play, via noteBest().
+         Storage failures (private mode, quota) are swallowed throughout:
+         the game simply lives in memory for the session, as Best does. */
+      var SAVE_VERSION = 1;
+      var SAVE_KEYS = { free: "chain-placement-save-free", daily: "chain-placement-save-daily" };
+      function saveGameNow() {
+        if (typeof walk !== "undefined" && walk) return;   // the tour never persists
+        if (over) return;                                  // finished games are cleared, not saved
+        if (!rng || typeof rng.seed !== "number" || typeof rng.draws !== "number") return;
+        var payload = {
+          v: SAVE_VERSION,
+          board: board.map(function (row) { return row.slice(); }),
+          hand: hand.slice(), handBag: handBag.slice(),
+          pool: pool.slice(), poolBags: poolBags.slice(), poolBag: poolBag,
+          nextBagId: nextBagId, shuffleCharges: shuffleCharges, bagsStarted: bagsStarted,
+          pendingShuffleNote: pendingShuffleNote,
+          score: score, turns: turns, highest: highest,
+          rngSeed: rng.seed, rngDraws: rng.draws
+        };
+        if (mode === "daily") payload.date = dailyDate;
+        try { window.localStorage.setItem(SAVE_KEYS[mode], JSON.stringify(payload)); } catch (e) { /* in-memory only */ }
+      }
+      function clearSave(m) {
+        if (typeof walk !== "undefined" && walk) return;   // a tour must never clear the real game's save
+        try { window.localStorage.removeItem(SAVE_KEYS[m]); } catch (e) { /* nothing to clear */ }
+      }
+      function validIntArray(a, len) {
+        if (!Array.isArray(a)) return false;
+        if (typeof len === "number" && a.length !== len) return false;
+        for (var i = 0; i < a.length; i++) {
+          if (typeof a[i] !== "number" || !isFinite(a[i]) || Math.floor(a[i]) !== a[i] || a[i] < 0) return false;
+        }
+        return true;
+      }
+      function loadSave(m) {
+        var raw = null;
+        try { raw = window.localStorage.getItem(SAVE_KEYS[m]); } catch (e) { return null; }
+        if (!raw) return null;
+        var s = null;
+        try { s = JSON.parse(raw); } catch (e) { clearSave(m); return null; }
+        var ok = !!s && s.v === SAVE_VERSION
+          && Array.isArray(s.board) && s.board.length === BOARD_SIZE;
+        if (ok) for (var r = 0; r < BOARD_SIZE && ok; r++) ok = validIntArray(s.board[r], BOARD_SIZE);
+        if (ok) ok = validIntArray(s.hand) && s.hand.length >= 1 && s.hand.length <= PREVIEW_COUNT + 1
+          && validIntArray(s.handBag, s.hand.length)
+          && validIntArray(s.pool) && validIntArray(s.poolBags, s.pool.length)
+          && typeof s.poolBag === "number" && typeof s.nextBagId === "number"
+          && typeof s.shuffleCharges === "number" && s.shuffleCharges >= 0 && s.shuffleCharges <= SHUFFLE_MAX
+          && typeof s.bagsStarted === "number"
+          && typeof s.score === "number" && isFinite(s.score) && s.score >= 0
+          && typeof s.turns === "number" && s.turns >= 0
+          && typeof s.highest === "number" && s.highest >= 0
+          && typeof s.rngSeed === "number" && isFinite(s.rngSeed)
+          && typeof s.rngDraws === "number" && s.rngDraws >= 0 && Math.floor(s.rngDraws) === s.rngDraws;
+        if (ok && m === "daily") {
+          var today = localDateString(new Date());
+          ok = s.date === today && (s.rngSeed >>> 0) === hashString("chain-placement:" + today);
+        }
+        if (!ok) { clearSave(m); return null; }
+        return s;
+      }
+      function applySave(m, s) {
+        mode = m;
+        dailyDate = m === "daily" ? s.date : localDateString(new Date());
+        el.dailySub.textContent = dailyDate;
+        rng = rngFromState(s.rngSeed, s.rngDraws);
+        board = s.board.map(function (row) { return row.slice(); });
+        hand = s.hand.slice(); handBag = s.handBag.slice();
+        pool = s.pool.slice(); poolBags = s.poolBags.slice(); poolBag = s.poolBag;
+        nextBagId = s.nextBagId; shuffleCharges = s.shuffleCharges; bagsStarted = s.bagsStarted;
+        pendingShuffleNote = !!s.pendingShuffleNote;
+        score = s.score; turns = s.turns; highest = s.highest;
+        busy = false; over = false;
+        el.overlay.classList.remove("open");
+        el.copyStatus.textContent = "";
+        el.shareText.classList.remove("show");
+        el.turnLine.textContent = mode === "daily"
+          ? "Daily " + dailyDate + " — everyone gets this exact tile order. Tap an empty cell."
+          : "Tap an empty cell to place the tile.";
+        el.tabFree.setAttribute("aria-selected", mode === "free" ? "true" : "false");
+        el.tabDaily.setAttribute("aria-selected", mode === "daily" ? "true" : "false");
+        renderAll();
+      }
+      /* Resume mode m's saved game if a valid one is waiting. */
+      function restoreSession(m) {
+        var s = loadSave(m);
+        if (!s) return false;
+        applySave(m, s);
+        return true;
+      }
+      window.addEventListener("pagehide", function () { if (!busy) saveGameNow(); });
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "hidden" && !busy) saveGameNow();
       });
 
       var el = {
@@ -1553,6 +1683,7 @@
         el.turnLine.textContent = "Bag shuffled: the undealt tiles are in a new order. " +
           shuffleCharges + (shuffleCharges === 1 ? " shuffle" : " shuffles") + " left.";
         renderAll();
+        saveGameNow();
         if (typeof walk !== "undefined" && walk) walkShuffleDone();
       }
 
@@ -1827,6 +1958,7 @@
         }
         busy = false;
         renderShuffleBtn();
+        saveGameNow();   // chains have resolved: persist the settled position
 
         if (boardFull()) endGame();
         if (typeof walk !== "undefined" && walk) walkPlaceDone();
@@ -1837,7 +1969,9 @@
         if (typeof walk !== "undefined" && walk) return;   // never reset a real game out from under the walkthrough
         dailyDate = localDateString(new Date());
         el.dailySub.textContent = dailyDate;
-        rng = mode === "daily" ? mulberry32(hashString("chain-placement:" + dailyDate)) : Math.random;
+        rng = seededRng(mode === "daily"
+          ? hashString("chain-placement:" + dailyDate)
+          : (Math.floor(Math.random() * 4294967296) >>> 0));
         board = [];
         for (var r = 0; r < BOARD_SIZE; r++) board.push(new Array(BOARD_SIZE).fill(0));
         hand = []; handBag = []; pool = []; poolBags = []; poolBag = -1; nextBagId = 0;
@@ -1852,9 +1986,11 @@
           : "Tap an empty cell to place the tile.";
         topUpHand();
         renderAll();
+        saveGameNow();   // a fresh game overwrites any previous save for this mode
       }
       function endGame() {
         over = true;
+        clearSave(mode);   // a finished game leaves no resumable save behind
         buzz([12, 40, 12]);
         /* The closing figure sounds once per real game over; the
            walkthrough never ends a real game, so it stays silent there. */
@@ -1883,7 +2019,7 @@
         mode = next;
         el.tabFree.setAttribute("aria-selected", mode === "free" ? "true" : "false");
         el.tabDaily.setAttribute("aria-selected", mode === "daily" ? "true" : "false");
-        startGame();
+        if (!restoreSession(next)) startGame();
       }
       el.tabFree.addEventListener("click", function () { playChromeClick(); setMode("free"); });
       el.tabDaily.addEventListener("click", function () { playChromeClick(); setMode("daily"); });
@@ -2446,7 +2582,8 @@
       if (entSoundBtn) entSoundBtn.addEventListener("click", toggleSound);
       document.getElementById("homeBtn").addEventListener("click", showEntrance);
 
-      startGame();
+      /* Boot: resume a saved Free Play game if one is waiting, else deal fresh. */
+      if (!restoreSession("free")) startGame();
     </script>
   </body>
 </html>
