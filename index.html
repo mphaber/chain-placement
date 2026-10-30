@@ -889,7 +889,7 @@
               <svg class="ic ic-off" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9.5v5h3.5L12 19.5v-15L6.5 9.5H3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
             </button>
             <span class="help-sep" aria-hidden="true">·</span>
-            <button type="button" id="entAmbBtn" class="ent-link" aria-pressed="false">Ambience</button>
+            <button type="button" id="entAmbBtn" class="ent-link" aria-pressed="false">Music</button>
           </div>
         </div>
         <div class="ent-credit"><span>Created by Matthew Haber</span><span>© 2026 Real Sparks. All rights reserved.</span></div>
@@ -912,6 +912,11 @@
             <svg class="ic ic-on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9.5v5h3.5L12 19.5v-15L6.5 9.5H3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.4 7.4 0 0 1 0 10.4"/></svg>
             <svg class="ic ic-off" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9.5v5h3.5L12 19.5v-15L6.5 9.5H3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
             <span class="btn-label">Sound</span>
+          </button>
+          <button class="new-btn sound-btn" id="musicBtn" type="button" aria-pressed="false" aria-label="Music off">
+            <svg class="ic ic-on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+            <svg class="ic ic-off" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 4l16 16"/></svg>
+            <span class="btn-label">Music</span>
           </button>
           <button class="new-btn" id="newGameBtn" type="button">New game</button>
         </div>
@@ -1431,12 +1436,16 @@
       /* One shared toggle for both sound buttons (header and entrance):
          flips the one soundOn state, persists it, syncs both buttons, and
          plays a confirmation tap when turning on. Turning off also stops
-         the entrance ambience, which cannot outlive sound. */
+         the music, which cannot outlive sound; turning on restarts it
+         when the music preference is on. */
       function toggleSound() {
         soundOn = !soundOn;
         try { window.localStorage.setItem(SOUND_KEY, soundOn ? "on" : "off"); } catch (e) {}
         renderSoundBtn();
-        if (soundOn) playPlace();   // little confirmation tap, inside the gesture
+        if (soundOn) {
+          playPlace();   // little confirmation tap, inside the gesture
+          if (typeof musicOn !== "undefined" && musicOn && typeof startAmbience === "function") startAmbience();
+        }
         else if (typeof ambOn !== "undefined" && ambOn) stopAmbience();
       }
       soundBtn.addEventListener("click", toggleSound);
@@ -1451,7 +1460,10 @@
         if (audioCtx) ensureAudio();
       });
       document.addEventListener("visibilitychange", function () {
-        if (document.visibilityState === "visible" && audioCtx) ensureAudio();
+        if (document.visibilityState === "visible" && audioCtx) {
+          ensureAudio();
+          if (typeof musicOn !== "undefined" && musicOn && soundOn && typeof ambOn !== "undefined" && !ambOn && typeof startAmbience === "function") startAmbience();
+        }
       });
 
       /* ---------- Haptics: guarded vibration ticks ----------
@@ -2215,19 +2227,27 @@
       fillEntField();
       refreshEntChips();
 
-      /* ---------- Ambience: entrance-only generative pad (staging) ----------
-         One slow chord loop in the merge chime's key family (A major),
-         off by default, never persisted, and never heard in the game view:
-         enterMode(), the entrance Walkthrough button, turning sound off,
-         and pagehide all stop it. Total level stays far under the chimes. */
-      var ambOn = false, ambTimer = null, ambGain = null, ambNodes = [], ambStep = 0;
+      /* ---------- Music: generative pad plus sparse pentatonic bells ----------
+         One slow chord loop in the merge chime's key family (A major) with
+         sparse A-major pentatonic bells on top, driven by a persisted
+         opt-in preference (default off). It plays across the entrance and
+         the game, and stops with the music toggle, with sound off, and on
+         pagehide, resuming on return (visibilitychange / pageshow) or on
+         the first tap after a reload. Total level stays far under the chimes. */
+      var MUSIC_KEY = "chain-placement-music";
+      var musicOn = false;
+      try {
+        if (window.localStorage.getItem(MUSIC_KEY) === "1") musicOn = true;
+      } catch (e) { /* storage unavailable: default to off, in-memory only */ }
+      var ambOn = false, ambTimer = null, ambGain = null, ambNodes = [], ambStep = 0, ambBellTimer = null;
       var AMB_CHORDS = [
         [110.00, 164.81, 277.18],   // A major
         [82.41, 123.47, 207.65],    // E major
-        [138.59, 164.81, 207.65],   // C# minor
+        [138.59, 207.65, 164.81],   // C# minor
         [82.41, 123.47, 207.65]     // E major
       ];
-      var AMB_LEVELS = [0.16, 0.11, 0.07];
+      var AMB_LEVELS = [0.12, 0.08, 0.04];
+      var AMB_BELL_NOTES = [440.00, 554.37, 659.25, 739.99, 880.00];
       function ambChord() {
         var ctx = audioCtx;
         if (!ctx || !ambGain || !ambOn) return;
@@ -2252,11 +2272,52 @@
             ambNodes.push(osc);
             ambNodes.push(g);
           }
-          if (ambNodes.length > 24) ambNodes.splice(0, ambNodes.length - 12);
-        } catch (e) { /* ambience is decorative: fail silent */ }
+          if (ambNodes.length > 48) ambNodes.splice(0, ambNodes.length - 24);
+        } catch (e) { /* music is decorative: fail silent */ }
+      }
+      function ambBell() {
+        var ctx = audioCtx;
+        if (!ctx || !ambGain || !ambOn) return;
+        try {
+          var freq = AMB_BELL_NOTES[Math.floor(Math.random() * AMB_BELL_NOTES.length)];
+          var t = ctx.currentTime;
+          var g = ctx.createGain();
+          g.gain.setValueAtTime(0.06, t);
+          g.gain.setTargetAtTime(0, t, 0.9);
+          g.connect(ambGain);
+          var osc = ctx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.value = freq;
+          osc.connect(g);
+          var osc2 = ctx.createOscillator();
+          osc2.type = "sine";
+          osc2.frequency.value = freq * 2;
+          var g2 = ctx.createGain();
+          g2.gain.value = 0.28;
+          osc2.connect(g2);
+          g2.connect(g);
+          osc.start(t);
+          osc.stop(t + 5);
+          osc2.start(t);
+          osc2.stop(t + 5);
+          ambNodes.push(osc);
+          ambNodes.push(osc2);
+          ambNodes.push(g2);
+          ambNodes.push(g);
+          if (ambNodes.length > 48) ambNodes.splice(0, ambNodes.length - 24);
+        } catch (e) { /* music is decorative: fail silent */ }
+      }
+      function scheduleAmbBell() {
+        if (!ambOn) return;
+        ambBellTimer = setTimeout(function () {
+          ambBellTimer = null;
+          ambBell();
+          scheduleAmbBell();
+        }, 2300 + Math.random() * 1600);
       }
       function startAmbience() {
         if (ambOn) return;
+        if (!musicOn || !soundOn) return;
         var ctx = ensureAudio();
         if (!ctx || !soundOn) return;
         try {
@@ -2265,20 +2326,17 @@
           ambGain.connect(masterGain || ctx.destination);
           ambGain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 2.0);
           ambOn = true;
-          ambStep = 0;
           ambChord();
           ambTimer = setInterval(ambChord, 7000);
-          var b = document.getElementById("entAmbBtn");
-          if (b) b.setAttribute("aria-pressed", "true");
+          scheduleAmbBell();
         } catch (e) { ambOn = false; ambGain = null; }
       }
       function stopAmbience() {
         if (ambTimer) { clearInterval(ambTimer); ambTimer = null; }
+        if (ambBellTimer) { clearTimeout(ambBellTimer); ambBellTimer = null; }
         var nodes = ambNodes; ambNodes = [];
         var g = ambGain; ambGain = null;
         ambOn = false;
-        var b = document.getElementById("entAmbBtn");
-        if (b) b.setAttribute("aria-pressed", "false");
         if (g && audioCtx) {
           try {
             var t = audioCtx.currentTime;
@@ -2295,9 +2353,35 @@
           if (g) { try { g.disconnect(); } catch (e) {} }
         }, 1000);
       }
-      document.getElementById("entAmbBtn").addEventListener("click", function () {
-        if (ambOn) stopAmbience();
-        else if (soundOn) startAmbience();
+      function renderMusicBtns() {
+        var pressed = musicOn ? "true" : "false";
+        var entBtn = document.getElementById("entAmbBtn");
+        if (entBtn) entBtn.setAttribute("aria-pressed", pressed);
+        var musicBtn = document.getElementById("musicBtn");
+        if (musicBtn) {
+          musicBtn.setAttribute("aria-pressed", pressed);
+          musicBtn.setAttribute("aria-label", musicOn ? "Music on" : "Music off");
+        }
+      }
+      function toggleMusic() {
+        musicOn = !musicOn;
+        try { window.localStorage.setItem(MUSIC_KEY, musicOn ? "1" : "0"); } catch (e) {}
+        renderMusicBtns();
+        if (musicOn) {
+          if (soundOn) startAmbience();
+        } else {
+          stopAmbience();
+        }
+      }
+      document.getElementById("entAmbBtn").addEventListener("click", toggleMusic);
+      var musicBtnEl = document.getElementById("musicBtn");
+      if (musicBtnEl) musicBtnEl.addEventListener("click", toggleMusic);
+      renderMusicBtns();
+      document.addEventListener("pointerdown", function () {
+        if (musicOn && soundOn && !ambOn) startAmbience();
+      });
+      window.addEventListener("pageshow", function () {
+        if (audioCtx && musicOn && soundOn && !ambOn) startAmbience();
       });
       document.addEventListener("pagehide", function () { stopAmbience(); });
 
@@ -2349,7 +2433,6 @@
       function enterMode(m) {
         buzz(8);
         playChromeClick();
-        stopAmbience();
         hideEntrance();
         if (m !== mode) setMode(m);
       }
@@ -2357,7 +2440,6 @@
       document.getElementById("entDaily").addEventListener("click", function () { enterMode("daily"); });
       document.getElementById("entHelp").addEventListener("click", openTut);
       document.getElementById("entWalk").addEventListener("click", function () {
-        stopAmbience();
         hideEntrance();
         startWalkthrough();
       });
