@@ -137,12 +137,14 @@
       .sound-btn[aria-pressed="false"] .ic-off { display: block; }
       .help-btn .q { font-weight: 800; color: var(--accent); margin-right: 5px; }
       @media (max-width: 430px) {
-        h1 { font-size: 23px; }
-        .logo-mark { width: 38px; height: 38px; }
-        header.top { gap: 10px; }
-        .top-actions { gap: 6px; }
-        .new-btn { padding: 8px 11px; }
-        .sound-btn { padding: 8px 10px; }
+        h1 { font-size: 20px; }
+        .logo-mark { width: 32px; height: 32px; }
+        header.top { gap: 8px; }
+        .title-row { gap: 6px; }
+        .top-actions { gap: 4px; }
+        .new-btn { padding: 8px 5px; }
+        .sound-btn { padding: 8px 5px; }
+        .top-actions .home-btn { padding: 8px 5px; }
         .help-btn .btn-label { display: none; }
         .help-btn .q { margin-right: 0; }
       }
@@ -705,6 +707,29 @@
         50% { box-shadow: 0 0 0 3px var(--surface), 0 0 0 10px var(--merge-ring), 0 0 30px rgba(180, 118, 42, 0.85); }
       }
       .queue.tut-highlight, .shuffle-btn.tut-highlight { animation: tutpulse 1.15s ease-in-out infinite; }
+      /* Small windows: the in-flow coach card sits far below the fold at
+         phone heights, so while the tour runs it leaves the flow and docks
+         as an overlay sheet instead (bottom by default, top when the
+         step's target sits low on the board). The walkthrough script
+         scrolls the highlighted target into the open strip beside it.
+         Same tray gradient, border, radius and shadow as the in-flow
+         card; above 430px nothing changes. */
+      @media (max-width: 430px) {
+        .coach.open {
+          position: fixed;
+          left: 10px; right: 10px;
+          height: auto; max-height: 46vh;
+          margin-top: 0; padding: 12px 14px;
+          z-index: 35;
+        }
+        .coach.open.dock-bottom { bottom: calc(10px + env(safe-area-inset-bottom)); }
+        .coach.open.dock-top { top: calc(10px + env(safe-area-inset-top)); }
+        .coach.open .coach-title { font-size: 17px; }
+        .coach.open .coach-text { font-size: 13.5px; line-height: 1.5; overflow-y: auto; }
+        .coach.open .coach-foot { min-height: 36px; margin-top: 8px; flex-wrap: wrap; }
+        .coach.open .coach-actions { flex-wrap: wrap; justify-content: flex-end; }
+        .coach.open .coach-btn { padding: 8px 12px; }
+      }
       @media (prefers-reduced-motion: reduce) {
         .cell.tut-target, .queue.tut-highlight, .shuffle-btn.tut-highlight { animation: none; box-shadow: 0 0 0 2px var(--surface), 0 0 0 5px var(--merge-ring); }
         .coach.nudge, .cell.tut-target-hard { animation: none; }
@@ -712,6 +737,23 @@
       footer.note { text-align: center; color: var(--ink-soft); font-size: 12px; margin-top: 16px; }
       footer.credit { text-align: center; color: var(--ink-soft); font-size: 12px; line-height: 1.6; margin-top: 20px; }
       footer.credit p { margin: 0; }
+
+      /* Social row under the credit lines: quiet muted monochrome glyphs
+         in the ink/bronze palette, 40px tap targets, centered. */
+      .social-row { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 6px; }
+      .social-row a {
+        width: 40px; height: 40px; flex: none;
+        display: inline-flex; align-items: center; justify-content: center;
+        color: var(--ink-soft); border-radius: 10px; text-decoration: none;
+      }
+      .social-row a:hover { color: var(--accent); }
+      .social-row a:active { transform: scale(0.94); }
+      .social-row svg { width: 20px; height: 20px; flex: none; display: block; }
+
+      /* Game-over Share control: the quiet secondary button, with its
+         share glyph sitting inline before the word. */
+      .share-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+      .share-btn svg { width: 15px; height: 15px; flex: none; display: block; }
 
       /* ---------- Entrance (start screen) ---------- */
       #entrance {
@@ -859,6 +901,7 @@
         }
         .ent-col-left { margin-bottom: 0; }
         .ent-credit { grid-column: 1 / -1; margin-top: 10px; }
+        .ent-social { grid-column: 1 / -1; }
       }
     </style>
   </head>
@@ -893,6 +936,11 @@
           </div>
         </div>
         <div class="ent-credit"><span>Created by Matthew Haber</span><span>© 2026 Real Sparks. All rights reserved.</span></div>
+        <div class="social-row ent-social">
+          <a href="https://realsparks.itch.io" target="_blank" rel="noopener" aria-label="Real Sparks on itch.io"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 8h11a4.5 4.5 0 0 1 4.4 5.4l-.6 2.1A3.5 3.5 0 0 1 18 18.1c-.9 0-1.8-.4-2.4-1L14.4 15.4H9.6L8.4 16.7c-.6.6-1.5 1-2.4 1a3.5 3.5 0 0 1-3.3-2.6l-.6-2.1A4.5 4.5 0 0 1 6.5 8Z"/><path d="M7.2 10.8v3.4M5.5 12.5h3.4"/><circle cx="16.4" cy="11.6" r="0.7" fill="currentColor" stroke="none"/><circle cx="18.1" cy="13.4" r="0.7" fill="currentColor" stroke="none"/></svg></a>
+          <a href="https://www.youtube.com/@Realsparksgames" target="_blank" rel="noopener" aria-label="Real Sparks on YouTube"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+          <a href="https://www.linkedin.com/company/realsparks/" target="_blank" rel="noopener" aria-label="Real Sparks on LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.065.925 2.065 2.063 0 1.139-.925 2.065-2.065 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.225 0z"/></svg></a>
+        </div>
       </div>
     </div>
     <div class="wrap">
@@ -977,7 +1025,7 @@
             </div>
             <div class="over-actions">
               <button class="btn primary" id="againBtn" type="button">Play again</button>
-              <button class="btn" id="copyBtn" type="button">Copy result</button>
+              <button class="btn share-btn" id="shareBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 15V4.5M8.3 7.2 12 3.5l3.7 3.7"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 11.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-7.5"/></svg>Share</button>
             </div>
             <div class="copy-status" id="copyStatus"></div>
             <textarea class="share-text" id="shareText" rows="3" readonly></textarea>
@@ -1056,6 +1104,11 @@
       <footer class="credit">
         <p>Created by Matthew Haber</p>
         <p>© 2026 Real Sparks. All rights reserved.</p>
+        <div class="social-row">
+          <a href="https://realsparks.itch.io" target="_blank" rel="noopener" aria-label="Real Sparks on itch.io"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 8h11a4.5 4.5 0 0 1 4.4 5.4l-.6 2.1A3.5 3.5 0 0 1 18 18.1c-.9 0-1.8-.4-2.4-1L14.4 15.4H9.6L8.4 16.7c-.6.6-1.5 1-2.4 1a3.5 3.5 0 0 1-3.3-2.6l-.6-2.1A4.5 4.5 0 0 1 6.5 8Z"/><path d="M7.2 10.8v3.4M5.5 12.5h3.4"/><circle cx="16.4" cy="11.6" r="0.7" fill="currentColor" stroke="none"/><circle cx="18.1" cy="13.4" r="0.7" fill="currentColor" stroke="none"/></svg></a>
+          <a href="https://www.youtube.com/@Realsparksgames" target="_blank" rel="noopener" aria-label="Real Sparks on YouTube"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+          <a href="https://www.linkedin.com/company/realsparks/" target="_blank" rel="noopener" aria-label="Real Sparks on LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.065.925 2.065 2.063 0 1.139-.925 2.065-2.065 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.225 0z"/></svg></a>
+        </div>
       </footer>
     </div>
 
@@ -1063,6 +1116,7 @@
       "use strict";
 
       /* ---------- Configuration (board size is a setting, not a magic number) ---------- */
+      var PLAY_URL = "https://mphaber.github.io/chain-placement/"; // the share link of record
       var BOARD_SIZE = 5;                 // prototype plays 5x5; 4 and 6 are future player options
       var BAG_TEMPLATE = [2, 2, 2, 2, 2, 2, 2, 4, 4, 8];
       var PREVIEW_COUNT = 3;
@@ -2026,22 +2080,48 @@
       el.shuffleBtn.addEventListener("click", doShuffle);
       document.getElementById("newGameBtn").addEventListener("click", startGame);
       document.getElementById("againBtn").addEventListener("click", function () { playChromeClick(); startGame(); });
-      document.getElementById("copyBtn").addEventListener("click", function () {
+      document.getElementById("shareBtn").addEventListener("click", function () {
         var text = shareString();
-        el.shareText.value = text;
-        function done(ok) {
-          el.copyStatus.textContent = ok ? "Copied — paste it anywhere." : "Copy blocked here; the result text is shown below to copy by hand.";
-          if (!ok) { el.shareText.classList.add("show"); el.shareText.select(); }
+        /* Copy fallback: the result string plus the play link, copied with
+           the same clipboard mechanism (and the same "Copied" feedback)
+           the previous copy control used. */
+        function copyFallback() {
+          var copyText = text + "\n" + PLAY_URL;
+          el.shareText.value = copyText;
+          function done(ok) {
+            el.copyStatus.textContent = ok ? "Copied — paste it anywhere." : "Copy blocked here; the result text is shown below to copy by hand.";
+            if (!ok) { el.shareText.classList.add("show"); el.shareText.select(); }
+          }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(copyText).then(function () { done(true); }, function () { fallback(); });
+          } else { fallback(); }
+          function fallback() {
+            el.shareText.classList.add("show");
+            el.shareText.select();
+            var ok = false;
+            try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+            done(ok);
+          }
         }
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(function () { done(true); }, function () { fallback(); });
-        } else { fallback(); }
-        function fallback() {
-          el.shareText.classList.add("show");
-          el.shareText.select();
-          var ok = false;
-          try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
-          done(ok);
+        if (navigator.share) {
+          var sharePromise;
+          try {
+            sharePromise = navigator.share({ title: "Thrink", text: text, url: PLAY_URL });
+          } catch (e) {
+            copyFallback();
+            return;
+          }
+          if (sharePromise && typeof sharePromise.then === "function") {
+            sharePromise.then(function () {}, function (err) {
+              /* A cancelled share sheet (AbortError) stays silent: no
+                 error shown and no fallback. Any other failure falls
+                 through to the copy fallback. */
+              if (err && err.name === "AbortError") return;
+              copyFallback();
+            });
+          }
+        } else {
+          copyFallback();
         }
       });
 
@@ -2202,6 +2282,7 @@
       function startWalkthrough() {
         if (walk || busy) return;
         walk = { step: 0, phase: "read", target: null, cellHL: null, snapshot: snapshotGame() };
+        hideEntrance();   // entering via the entrance's Help overlay leaves the entrance up and the body scroll-locked; the tour needs the game layer and its scroll
         setupWalkState();
         el.coach.classList.add("open");
         walkShowStep(1);
@@ -2211,6 +2292,8 @@
         var snap = walk.snapshot;
         walk = null;
         el.coach.classList.remove("open");
+        el.coach.classList.remove("dock-top");
+        el.coach.classList.remove("dock-bottom");
         applyWalkHighlights();
         restoreGame(snap);
       }
@@ -2246,6 +2329,40 @@
         b.addEventListener("click", fn);
         el.coachActions.appendChild(b);
       }
+      /* Small-window tour layout: dock the coach overlay clear of the
+         step's highlighted target, then scroll the target into the open
+         strip of window beside the card. The target element is resolved
+         inside the frame callback because renderAll rebuilds the board
+         cells. No-op above 430px, where the coach stays in flow under
+         the board exactly as before. */
+      function coachDockAndScroll(def) {
+        if (!window.matchMedia || !window.matchMedia("(max-width: 430px)").matches) return;
+        var kind = null, cell = null;
+        if (def.hl === "queue") kind = "queue";
+        else if (def.type === "shuffle") kind = "shuffle";
+        else if (walk.cellHL) { kind = "cell"; cell = walk.cellHL; }
+        var lowTarget = !!(cell && cell[0] >= 3);
+        el.coach.classList.toggle("dock-top", lowTarget);
+        el.coach.classList.toggle("dock-bottom", !lowTarget);
+        if (!kind) return;
+        window.requestAnimationFrame(function () {
+          if (!walk) return;
+          var target = kind === "queue" ? el.queueCard
+            : kind === "shuffle" ? el.shuffleBtn
+            : el.board.children[cell[0] * BOARD_SIZE + cell[1]];
+          if (!target) return;
+          var vh = window.innerHeight;
+          var cardH = el.coach.offsetHeight;
+          var r = target.getBoundingClientRect();
+          if (lowTarget) {
+            if (r.bottom > vh - 8) { window.scrollBy(0, r.bottom - (vh - 8)); r = target.getBoundingClientRect(); }
+            if (r.top < cardH + 22) window.scrollBy(0, r.top - (cardH + 22));
+          } else {
+            if (r.top < 10) { window.scrollBy(0, r.top - 10); r = target.getBoundingClientRect(); }
+            if (r.bottom > vh - cardH - 22) window.scrollBy(0, r.bottom - (vh - cardH - 22));
+          }
+        });
+      }
       function renderWalkCoach(def, text) {
         el.coachTitle.textContent = def.title;
         el.coachText.textContent = text;
@@ -2264,6 +2381,7 @@
         } else if (walk.phase === "read" || walk.phase === "done") {
           addCoachBtn("Next", true, walkAdvance);
         }
+        coachDockAndScroll(def);
       }
       function applyWalkHighlights() {
         var def = walk ? WALK_STEPS[walk.step - 1] : null;
